@@ -15,6 +15,13 @@ int main(int argc, char** argv) {
 	// Build the kdTree.
 	auto tree = new kdTree(*triangles);
 
+	int deepest = 0, biggest = 0;
+	tree->root->get_stats(deepest, biggest);
+	cout << "Depth of: " << deepest << " Size: " << biggest << endl;
+
+	delete tree;
+	delete triangles;
+
 	return 0;
 }
 

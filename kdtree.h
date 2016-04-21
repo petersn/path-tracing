@@ -22,13 +22,17 @@ class kdTreeNode {
 
 public:
 	kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangle>* all_triangles);
+	~kdTreeNode();
+	void get_stats(int& deepest_depth, int& biggest_set);
 };
 
 class kdTree {
+public: // XXX: For temporary debugging.
 	kdTreeNode* root;
 
 public:
 	kdTree(std::vector<Triangle>& triangles);
+	~kdTree();
 };
 
 #endif

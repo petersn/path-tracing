@@ -28,7 +28,7 @@ void AABB::set_to_point(Vec p) {
 
 void AABB::update(Vec p) {
 	minima = vec_min(minima, p);
-	maxima = vec_min(maxima, p);
+	maxima = vec_max(maxima, p);
 }
 
 void AABB::update(const AABB& other) {

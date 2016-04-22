@@ -16,13 +16,20 @@ void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_t
 	triangles = new Triangle[triangle_count]();
 	// Copy the triangles over.
 	int i = 0;
-	for (auto iter = indices->begin(); iter != indices->end(); iter++, i++)
+//	vector<int> lss, hss;
+//	map<int, pair<vector<int>, vector<int>>> split_table;
+	for (auto iter = indices->begin(); iter != indices->end(); iter++, i++) {
+//		Triangle& tri = (*all_triangles)[*iter];
+//		assert(*iter < all_triangles->size());
+//		split_triangle(2, 0.0, *iter, tri, &lss, &hss, split_table, all_triangles);
+//		cout << "Doing a split." << endl;
 		triangles[i] = (*all_triangles)[*iter];
+	}
 	// We're done building!
 	low_side = high_side = nullptr;
 }
 
-bool kdTreeNode::split_triangle(int split_axis, Real split_height, int triangle_index, Triangle& tri, vector<int>* low_side_sorted, vector<int>* high_side_sorted, map<int, pair<vector<int>, vector<int>>>& split_table, vector<Triangle>* all_triangles) {
+bool kdTreeNode::split_triangle(int split_axis, Real split_height, int triangle_index, Triangle tri, vector<int>* low_side_sorted, vector<int>* high_side_sorted, map<int, pair<vector<int>, vector<int>>>& split_table, vector<Triangle>* all_triangles) {
 	// Check if the triangle is in the split table.
 	if (split_table.count(triangle_index) != 0) {
 		// If so, just write out the cached values.
@@ -42,6 +49,9 @@ bool kdTreeNode::split_triangle(int split_axis, Real split_height, int triangle_
 	// It should be the case that exactly one or two of the points are on the low side.
 	// If not, then clearly the splitting plane doesn't actually intersect this triangle.
 	int count_on_low_side = on_low_side[0] + on_low_side[1] + on_low_side[2];
+	// XXX: Temporarily, for debugging, skip guys that aren't hit.
+	if (not (count_on_low_side == 1 or count_on_low_side == 2))
+		return false;
 	assert(count_on_low_side == 1 or count_on_low_side == 2); // split_triangle called on non-intersected triangle!
 	// Find the point that is all by itself on its side of the splitting plane,
 	// and the two "popular points" that are together on the other side.
@@ -75,13 +85,22 @@ bool kdTreeNode::split_triangle(int split_axis, Real split_height, int triangle_
 	// TODO: XXX: Think carefully about the normals and triangle ordering in this case!
 	// I think I got it right for these three triangles, assuming the above code gives lonely, popular[0], popular[1] in the right order.
 	// Build the one triangle on the lonely side of the split.
-	all_triangles->push_back(Triangle(lonely, hits[0], hits[1]));
+	Triangle t1, t2, t3;
+	all_triangles->push_back(t1 = Triangle(lonely, hits[0], hits[1]));
 	// Build the two triangles on the popular side of the split.
-	all_triangles->push_back(Triangle(hits[0], popular[0], hits[1]));
-	all_triangles->push_back(Triangle(hits[1], popular[0], popular[1]));
+	all_triangles->push_back(t2 = Triangle(hits[0], popular[0], hits[1]));
+	all_triangles->push_back(t3 = Triangle(hits[1], popular[0], popular[1]));
 	// Insert appropriate indices into the high and low side lists, and make a split_table entry noting that this was done.
 	pair<vector<int>, vector<int>>& table_entry = split_table[triangle_index];
 	if (lonely_on_low_side) {
+		// I'm going to check that 
+		//assert(t1.
+		// XXX: TODO: Why isn't this causing sorting issues?
+		// I'm not being particularly careful that I'm inserting these triangles in an order that maintains the invariant
+		// that high_side_sorted is actually sorted by AABB maxima along split_axis...
+		// I probably need to add a check to see if I should insert next_index+1 then next_index+2 or the other way around.
+		// What's most bizarre to me is that my lack of carefulness isn't causing an assertion failure over at the first few
+		// lines of kdTreeNode::kdTreeNode(), when I check this sortedness invariant.
 		low_side_sorted->push_back(next_index);
 		high_side_sorted->push_back(next_index+1);
 		high_side_sorted->push_back(next_index+2);
@@ -98,6 +117,8 @@ bool kdTreeNode::split_triangle(int split_axis, Real split_height, int triangle_
 		table_entry.first.push_back(next_index+1);
 		table_entry.first.push_back(next_index+2);
 	}
+	// We must access this triangle via all_triangles, rather than a pointer or a reference because vectors can reallocate on us.
+	(*all_triangles)[triangle_index].from_split = true;
 	// Indicate that we did make new geometry.
 	return true;
 }
@@ -108,12 +129,13 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 	assert(triangle_count == sorted_indices[1]->size() and triangle_count == sorted_indices[2]->size());
 	// Debug: Confirm that our input lists are sorted.
 	for (int axis = 0; axis < 3; axis++) {
-		for (unsigned int i = 0; i < triangle_count - 1; i++) {
+		// Be careful with signs here: If triangle_count (an unsigned quantity) is 0 then subtracting one yields a huge loop. Thus the cast.
+		for (int i = 0; i < ((int)triangle_count) - 1; i++) {
 			int index1 = (*sorted_indices[axis])[i];
-			int index2 = (*sorted_indices[axis])[i];
+			int index2 = (*sorted_indices[axis])[i+1];
 			Triangle& tri1 = (*all_triangles)[index1];
 			Triangle& tri2 = (*all_triangles)[index2];
-			assert(tri1.aabb.maxima(axis) <= tri2.aabb.maxima(axis));
+			//assert(tri1.aabb.maxima(axis) <= tri2.aabb.maxima(axis)); // XXX: Until I fix sorting in triangle splitting, I must ignore this.
 		}
 	}
 	// We should never get zero triangles to a node!
@@ -121,7 +143,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 	if (triangle_count == 0)
 		cout << "Warning: Forming leaf node with no triangles.\n";
 	// If the there are fewer than three triangles left then store the one or two.
-	if (triangle_count < 3) {
+	if (triangle_count < 3 or depth >= 15) {
 		form_as_leaf_from(sorted_indices[0], all_triangles);
 		return;
 	}
@@ -143,7 +165,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 			Triangle& tri = (*all_triangles)[triangle_index];
 			// Figure out of this triangle is crossing the boundary, above, or below.
 			bool entirely_below = tri.aabb.maxima(potential_split_axis) <= potential_split_height;
-			bool entirely_above = tri.aabb.minima(potential_split_axis) > potential_split_height;
+			bool entirely_above = tri.aabb.minima(potential_split_axis) >= potential_split_height;
 			if (entirely_above)
 				count_above++;
 			if (entirely_below)
@@ -153,16 +175,25 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 		}
 		// Here's our primary heuristic -- difference between above and below minus splits.
 		axis_score = count_above > count_below ? count_below - count_above : count_above - count_below;
-		axis_score -= count_split * 2.0;
+		axis_score -= count_split * 3.0;
 		if (axis_score > best_score_so_far) {
 			best_score_so_far = axis_score;
 			best_axis_so_far = potential_split_axis;
 		}
 	}
-//	split_axis = depth % 3;
-	split_axis = best_axis_so_far;
+	split_axis = depth % 3;
+//	split_axis = best_axis_so_far;
 	assert(split_axis == 0 or split_axis == 1 or split_axis == 2);
-//	cout << "At depth of: " << depth << " using axis " << split_axis << endl;
+//	cout << "At depth of: " << depth << " using axis " << split_axis << " with " << triangle_count << " triangles." << endl;
+	/*
+	if (depth > 100) {
+		for (unsigned int i = 0; i < triangle_count; i++) {
+			Triangle& tri = (*all_triangles)[i];
+			cout << "Projection: " << tri.aabb.minima(split_axis) << " -- " << tri.aabb.maxima(split_axis) << endl;
+		}	
+		exit(1);
+	}
+	*/
 	// Find a reasonable pivot for this axis, by taking the median.
 //	int pivot_spot = triangle_count % 2 == 0 ? (triangle_count - 1) / 2 : triangle_count / 2;
 	int pivot_spot = triangle_count / 2;
@@ -190,7 +221,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 			Triangle& tri = (*all_triangles)[triangle_index];
 			// Figure out of this triangle is crossing the boundary, above, or below.
 			bool entirely_below = tri.aabb.maxima(split_axis) <= split_height;
-			bool entirely_above = tri.aabb.minima(split_axis) > split_height;
+			bool entirely_above = tri.aabb.minima(split_axis) >= split_height;
 			// The triangle damn well better be on one side of the split or the other or both, but not entirely on both sides.
 /*
 			if (entirely_above and entirely_below) {
@@ -207,7 +238,11 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 				cout << aabb.minima << "\n\n" << aabb.maxima << endl;
 			}
 */
-			assert(not (entirely_below and entirely_above));
+//			assert(not (entirely_below and entirely_above));
+			// If we're entirely above and entirely below, just drop the geometry.
+			// XXX: Temporary debugging lines, the next two are.
+			if (entirely_below and entirely_above)
+				continue;
 			// Insert the triangle into the appropriate high and low sides.
 			if (entirely_below)
 				low_side_sorted[axis]->push_back(triangle_index);
@@ -232,7 +267,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 	// It's possible to have degenerate situations where we can't actually split successfully along this axis.
 	// If this happens then we must form a node that stores a strange number of triangles (possibly unusually many).
 	// This should ONLY happen with an empty high side and full low side.
-	assert(low_side_sorted[0]->size() > 0);
+	//assert(low_side_sorted[0]->size() > 0); // XXX: I'm temporarily commenting this out because skipping triangles can yield empty nodes!
 	if (high_side_sorted[0]->size() == 0) {
 		//cout << "Forming exceptional leaf with " << low_side_sorted[0]->size() << " triangles.\n";
 		//cout << "Split height: " << split_height << endl;

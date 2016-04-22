@@ -58,6 +58,7 @@ struct Triangle {
 	Vec edge01, edge02;
 	Vec normal;
 	AABB aabb;
+	bool from_split;
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);

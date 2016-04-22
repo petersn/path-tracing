@@ -67,6 +67,7 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 	aabb.set_to_point(p0);
 	aabb.update(p1);
 	aabb.update(p2);
+	from_split = false;
 }
 
 // Performs M\"oller-Trumbore intersection as per Wikipedia.

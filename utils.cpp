@@ -2,6 +2,8 @@
 
 #include "utils.h"
 
+#define EPSILON 1e-4
+
 Ray::Ray() {
 	origin = Vec(0, 0, 0);
 	direction = Vec(0, 0, 1);
@@ -58,15 +60,40 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 	points[0] = p0;
 	points[1] = p1;
 	points[2] = p2;
-	normal = (p1 - p0).cross(p2 - p0);
+	edge01 = p1 - p0;
+	edge02 = p2 - p0;
+	normal = edge01.cross(edge02);
 	normal.normalize();
 	aabb.set_to_point(p0);
 	aabb.update(p1);
 	aabb.update(p2);
 }
 
-bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) {
+// Performs M\"oller-Trumbore intersection as per Wikipedia.
+bool Triangle::ray_test(const Ray& ray, Real& hit_parameter) {
+	Vec P = ray.direction.cross(edge02);
+	Real det = edge01.dot(P);
+	if (det > -EPSILON and det < EPSILON)
+		return false;
+	Real inv_det = 1.0 / det;
+	Vec T = ray.origin - points[0];
+	Real u = T.dot(P) * inv_det;
+	if (u < 0 or u > 1)
+		return false;
+	Vec Q = T.cross(edge01);
+	Real v = ray.direction.dot(Q) * inv_det;
+	if (v < 0 or u + v > 1)
+		return false;
+	Real t = edge02.dot(Q) * inv_det;
+	if (t <= EPSILON)
+		return false;
+	// In this case t is the parameter on the ray of the hit.
+	hit_parameter = t;
 	return true;
-//	assert(false); // TODO: Implement this.
+}
+
+bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) {
+	assert(false); // TODO: Implement this.
+	return true;
 }
 

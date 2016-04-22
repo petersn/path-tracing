@@ -1,5 +1,5 @@
 
-CPPFLAGS=-I/usr/include/eigen3 -std=c++11 -Wall -O3 -ffast-math -g -fopenmp
+CPPFLAGS=-I/usr/include/eigen3 -std=c++11 -Wall -O3 -ffast-math -g -fopenmp -fstack-protector-all
 
 all: example
 

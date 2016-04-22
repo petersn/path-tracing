@@ -5,6 +5,8 @@
 
 #include <Eigen/Dense>
 
+#define FLOAT_INF (1e100)
+
 typedef float Real;
 typedef Eigen::Vector3f Vec;
 typedef Eigen::Matrix<Real, 3, 3> Mat;
@@ -53,11 +55,13 @@ struct AABB {
 
 struct Triangle {
 	Vec points[3];
+	Vec edge01, edge02;
 	Vec normal;
 	AABB aabb;
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);
+	bool ray_test(const Ray& ray, Real& hit_parameter);
 	bool intersects_axis_aligned_plane(int axis, Real plane_height);
 };
 

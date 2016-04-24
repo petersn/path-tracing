@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <map>
-//#include <list>
 #include "utils.h"
 
 class kdTreeNode {

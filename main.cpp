@@ -21,7 +21,9 @@ int main(int argc, char** argv) {
 	auto tree = new kdTree(triangles);
 
 	int deepest = 0, biggest = 0;
+	cout << ":::";
 	tree->root->get_stats(deepest, biggest);
+	cout << endl;
 	cout << "Depth of: " << deepest << " Size: " << biggest << endl;
 
 	// Scan the tree, and write out an STL.

@@ -4,7 +4,7 @@ CPPFLAGS=-I/usr/include/eigen3 -std=c++11 -Wall -Wno-unused-variable -Wno-unused
 
 all: example
 
-example: kdtree.o utils.o stlreader.o main.o
+example: kdtree.o utils.o stlreader.o canvas.o main.o
 	g++ -o $@ $^ -lpng -fopenmp
 
 .PHONY: clean

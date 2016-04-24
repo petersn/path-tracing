@@ -9,6 +9,7 @@
 #include "utils.h"
 
 class kdTreeNode {
+public: // XXX: Also for debugging.
 	int depth;
 	int split_axis;
 	Real split_height;
@@ -19,6 +20,7 @@ class kdTreeNode {
 	int stored_triangles;
 	Triangle* triangles;
 	int managed_triangles;
+	char* reason_to_form;
 
 	void form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles);
 	bool split_triangle(int split_axis, Real split_height, int triangle_index, Triangle tri, vector<int>* low_side_sorted, vector<int>* high_side_sorted, std::map<int, std::pair<std::vector<int>, std::vector<int>>>& split_table, std::vector<Triangle>* all_triangles);

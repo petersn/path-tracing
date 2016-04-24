@@ -4,6 +4,9 @@
 
 #define EPSILON 1e-4
 
+using namespace std;
+#include <iostream>
+
 long long triangle_tests;
 
 Ray::Ray() {
@@ -47,11 +50,25 @@ void AABB::update(const AABB& other) {
 	maxima = vec_max(maxima, other.maxima);
 }
 
+#define PRINT_VEC(v) \
+	cout << v(0) << ", " << v(1) << ", " << v(2) << "\n\n";
+
 bool AABB::does_ray_intersect(const CastingRay& ray) {
 	Vec t0 = (minima - ray.ray.origin).array() * ray.recip_deltas.array();
 	Vec t1 = (maxima - ray.ray.origin).array() * ray.recip_deltas.array();
-	Real t_start = real_max(t0(0), real_max(t0(1), t0(2)));
-	Real t_end   = real_min(t1(0), real_min(t1(1), t1(2)));
+	Vec entrance_times = vec_min(t0, t1);
+	Vec exit_times = vec_max(t0, t1);
+	Real t_start = real_max(entrance_times(0), real_max(entrance_times(1), entrance_times(2)));
+	Real t_end   = real_min(exit_times(0), real_min(exit_times(1), exit_times(2)));
+/*
+	cout << "=== AABB check ===" << endl;
+	PRINT_VEC(ray.ray.origin)
+	PRINT_VEC(ray.ray.direction)
+	PRINT_VEC(minima)
+	PRINT_VEC(maxima)
+	PRINT_VEC(t0)
+	PRINT_VEC(t1)
+*/
 	// The box is behind us.
 	if (t_end < 0)
 		return false;

@@ -8,7 +8,7 @@ using namespace std;
 #include "stlreader.h"
 #include "kdtree.h"
 
-#define TOTAL_RAY_CASTS 1000
+#define TOTAL_RAY_CASTS 100000
 
 int main(int argc, char** argv) {
 	random_device rd;
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 
 	// Perform some random ray tests.
 	triangle_tests = 0;
-	Ray ray(Vec(-10.0, 0.0, 0.0), Vec(1.0, 0.0, 0.0));
+	Ray ray(Vec(-10.0, 0.0, 0.0), Vec(1.0, +0.04, -0.005));
 	Real hit_parameter;
 	bool result;
 	int hits = 0;

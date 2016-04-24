@@ -23,7 +23,7 @@ public: // XXX: Also for debugging.
 	void form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles);
 
 public:
-	kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangle>* all_triangles);
+	kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<int>* sorted_indices_by_max[3], vector<Triangle>* all_triangles);
 	~kdTreeNode();
 	void get_stats(int& deepest_depth, int& biggest_set);
 };

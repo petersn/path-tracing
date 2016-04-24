@@ -23,20 +23,32 @@ void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_t
 	low_side = high_side = nullptr;
 }
 
-kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangle>* all_triangles) : depth(depth) {
+kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<int>* sorted_indices_by_max[3], vector<Triangle>* all_triangles) : depth(depth) {
+	// Pull out an arbitrary ordering of all our indices for convenience use later.
+	vector<int>& all_our_indices = *sorted_indices_by_min[0];
+	// Make a quick way of accessing both _by_min and _by_max via an index to keep the following code DRYer.
+	vector<int>** sorted_indices_by[2] = {sorted_indices_by_min, sorted_indices_by_max};
 	// Make sure the three sorted indices lists are the same length.
-	unsigned int triangle_count = sorted_indices[0]->size();
+	unsigned int triangle_count = sorted_indices_by_min[0]->size();
+	// Store the total number of triangles from here on down in the tree.
 	managed_triangles = triangle_count;
-	assert(triangle_count == sorted_indices[1]->size() and triangle_count == sorted_indices[2]->size());
+	cout << endl;
+	assert(triangle_count == sorted_indices_by_min[1]->size() and triangle_count == sorted_indices_by_min[2]->size());
+	assert(triangle_count == sorted_indices_by_max[0]->size() and triangle_count == sorted_indices_by_max[1]->size() and triangle_count == sorted_indices_by_max[2]->size());
 	// Debug: Confirm that our input lists are sorted.
 	for (int axis = 0; axis < 3; axis++) {
-		// Be careful with signs here: If triangle_count (an unsigned quantity) is 0 then subtracting one yields a huge loop. Thus the cast.
-		for (int i = 0; i < ((int)triangle_count) - 1; i++) {
-			int index1 = (*sorted_indices[axis])[i];
-			int index2 = (*sorted_indices[axis])[i+1];
-			Triangle& tri1 = (*all_triangles)[index1];
-			Triangle& tri2 = (*all_triangles)[index2];
-			assert(tri1.aabb.maxima(axis) <= tri2.aabb.maxima(axis));
+		for (int minmax = 0; minmax < 2; minmax++) {
+			// Be careful with signs here: If triangle_count (an unsigned quantity) is 0 then subtracting one yields a huge loop. Thus the cast.
+			for (int i = 0; i < ((int)triangle_count) - 1; i++) {
+				int index1 = (*sorted_indices_by[minmax][axis])[i];
+				int index2 = (*sorted_indices_by[minmax][axis])[i+1];
+				Triangle& tri1 = (*all_triangles)[index1];
+				Triangle& tri2 = (*all_triangles)[index2];
+				if (minmax == 0)
+					assert(tri1.aabb.minima(axis) <= tri2.aabb.minima(axis));
+				else
+					assert(tri1.aabb.maxima(axis) <= tri2.aabb.maxima(axis));
+			}
 		}
 	}
 	// We should never get zero triangles to a node!
@@ -45,7 +57,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 		cerr << "Warning: Forming leaf node with no triangles.\n";
 	// If the there are fewer than three triangles left then store the one or two.
 	if (triangle_count < 3 or depth >= 20) {
-		form_as_leaf_from(sorted_indices[0], all_triangles);
+		form_as_leaf_from(&all_our_indices, all_triangles);
 		return;
 	}
 	// Otherwise we perform a split, and have no triangles.
@@ -58,10 +70,10 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 	Real best_sh_score = FLOAT_INF;
 	for (int potential_split_axis = 0; potential_split_axis < 3; potential_split_axis++) {
 		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test++) {
-			Real sample_sh = (*all_triangles)[(*sorted_indices[potential_split_axis])[tri_test]].aabb.maxima(potential_split_axis);
+			Real sample_sh = (*all_triangles)[all_our_indices[tri_test]].aabb.maxima(potential_split_axis);
 			int count_above = 0, count_below = 0;
 			for (unsigned int i = 0; i < triangle_count; i++) {
-				int triangle_index = (*sorted_indices[0])[i];
+				int triangle_index = all_our_indices[i];
 				Triangle& tri = (*all_triangles)[triangle_index];
 				// Figure out of this triangle is crossing the boundary, above, or below.
 				bool overlaps_below = tri.aabb.minima(potential_split_axis) <= sample_sh;
@@ -83,51 +95,59 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices[3], vector<Triangl
 	assert(split_axis == 0 or split_axis == 1 or split_axis == 2);
 	split_height = best_sh_so_far;
 	// Produce three new sorted lists for each side of the divider.
-	vector<int>* low_side_sorted[3];
-	vector<int>* high_side_sorted[3];
+	vector<int>* low_side_sorted_by_min[3];
+	vector<int>* low_side_sorted_by_max[3];
+	vector<int>** low_side_sorted_by[2] = {low_side_sorted_by_min, low_side_sorted_by_max};
+	vector<int>* high_side_sorted_by_min[3];
+	vector<int>* high_side_sorted_by_max[3];
+	vector<int>** high_side_sorted_by[2] = {high_side_sorted_by_min, high_side_sorted_by_max};
 	// Produce the sorted index sublists for the high and low sides.
 	for (int axis = 0; axis < 3; axis++) {
-		low_side_sorted[axis] = new vector<int>();
-		high_side_sorted[axis] = new vector<int>();
-		// Filter through the various indices.
-		for (unsigned int i = 0; i < triangle_count; i++) {
-			// Pick out the ith triangle index from the given sorted index list.
-			int triangle_index = (*sorted_indices[axis])[i];
-			Triangle& tri = (*all_triangles)[triangle_index];
-			// Figure out if this triangle is crossing the boundary, above, or below.
-			bool overlaps_below = tri.aabb.minima(split_axis) <= split_height;
-			bool overlaps_above = tri.aabb.maxima(split_axis) > split_height;
-			if (overlaps_below)
-				low_side_sorted[axis]->push_back(triangle_index);
-			if (overlaps_above)
-				high_side_sorted[axis]->push_back(triangle_index);
+		for (int minmax = 0; minmax < 2; minmax++) {
+			low_side_sorted_by[minmax][axis] = new vector<int>();
+			high_side_sorted_by[minmax][axis] = new vector<int>();
+			// Filter through the various indices.
+			for (unsigned int i = 0; i < triangle_count; i++) {
+				// Pick out the ith triangle index from the given sorted index list.
+				int triangle_index = (*sorted_indices_by[minmax][axis])[i];
+				Triangle& tri = (*all_triangles)[triangle_index];
+				// Figure out if this triangle is crossing the boundary, above, or below.
+				bool overlaps_below = tri.aabb.minima(split_axis) <= split_height;
+				bool overlaps_above = tri.aabb.maxima(split_axis) > split_height;
+				if (overlaps_below)
+					low_side_sorted_by[minmax][axis]->push_back(triangle_index);
+				if (overlaps_above)
+					high_side_sorted_by[minmax][axis]->push_back(triangle_index);
+			}
 		}
 	}
 	// Make sure the different axis sortings have the same number of nodes.
-	assert(low_side_sorted[0]->size() == low_side_sorted[1]->size());
-	assert(low_side_sorted[0]->size() == low_side_sorted[2]->size());
-	assert(high_side_sorted[0]->size() == high_side_sorted[1]->size());
-	assert(high_side_sorted[0]->size() == high_side_sorted[2]->size());
+	for (int minmax = 0; minmax < 2; minmax++) {
+		for (int i = 1; i < 3; i++) {
+			assert(low_side_sorted_by[minmax][0]->size() == low_side_sorted_by[minmax][i]->size());
+			assert(high_side_sorted_by[minmax][0]->size() == high_side_sorted_by[minmax][i]->size());
+		}
+	}
 	// Now a special check happens!
 	// It's possible to have degenerate situations where we can't actually split successfully along this axis.
 	// If this happens then we must form a node that stores a strange number of triangles (possibly unusually many).
 	// This should ONLY happen with an empty high side and full low side.
 	//assert(low_side_sorted[0]->size() > 0); // XXX: I'm temporarily commenting this out because skipping triangles can yield empty nodes!
-	if (high_side_sorted[0]->size() == triangle_count or low_side_sorted[0]->size() == triangle_count) {
-		form_as_leaf_from(sorted_indices[0], all_triangles);
-	} else if (high_side_sorted[0]->size() == 0 or (low_side_sorted[0]->size() == triangle_count and low_side_sorted[0]->size() == high_side_sorted[0]->size())) {
-		form_as_leaf_from(low_side_sorted[0], all_triangles);
-	} else if (low_side_sorted[0]->size() == 0) {
-		form_as_leaf_from(high_side_sorted[0], all_triangles);
+	unsigned int low_size = low_side_sorted_by_min[0]->size();
+	unsigned int high_size = high_side_sorted_by_min[0]->size();
+	if (high_size == triangle_count or low_size == triangle_count) {
+		form_as_leaf_from(&all_our_indices, all_triangles);
 	} else {
 		// Armed with these lists we make our children.
-		low_side = new kdTreeNode(depth+1, low_side_sorted, all_triangles);
-		high_side = new kdTreeNode(depth+1, high_side_sorted, all_triangles);
+		low_side = new kdTreeNode(depth+1, low_side_sorted_by_min, low_side_sorted_by_max, all_triangles);
+		high_side = new kdTreeNode(depth+1, high_side_sorted_by_min, high_side_sorted_by_max, all_triangles);
 	}
 	// Finally, free our scratch lists.
 	for (int axis = 0; axis < 3; axis++) {
-		delete low_side_sorted[axis];
-		delete high_side_sorted[axis];
+		for (int minmax = 0; minmax < 2; minmax++) {
+			delete low_side_sorted_by[minmax][axis];
+			delete high_side_sorted_by[minmax][axis];
+		}
 	}
 }
 
@@ -141,7 +161,7 @@ kdTreeNode::~kdTreeNode() {
 // Try not to puke at this global storage used for configuring the comparison function in leu of closures.
 vector<Triangle>* global_triangles;
 int global_comparison_axis;
-int global_use_maxima;
+bool global_use_maxima;
 // Check whether the xth triangle's first coordinate has a lower coordinate on the nth axis than the triangle with index y, where n is equal to global_comparison_axis.
 bool compare_on_nth_axis(const int& x, const int& y) {
 	vector<Triangle>& all_triangles = *global_triangles;
@@ -167,25 +187,33 @@ void kdTreeNode::get_stats(int& deepest_depth, int& biggest_set) {
 }
 
 kdTree::kdTree(vector<Triangle>* _all_triangles) {
-	// First we build three lists, sorting the indices of the triangles by their first coordinate along each of the three axes.
+	// First we build three lists, sorting the indices of the triangles by their min and max bounds along each of the three axes.
 	all_triangles = _all_triangles;
-	vector<int>* sorted_indices[3];
+	vector<int>* sorted_indices_by_min[3];
+	vector<int>* sorted_indices_by_max[3];
 	for (int axis = 0; axis < 3; axis++) {
-		// We allocate this list 
-		sorted_indices[axis] = new vector<int>();
-		for (unsigned int i = 0; i < all_triangles->size(); i++)
-			sorted_indices[axis]->push_back(i);
+		sorted_indices_by_min[axis] = new vector<int>();
+		sorted_indices_by_max[axis] = new vector<int>();
+		for (unsigned int i = 0; i < all_triangles->size(); i++) {
+			sorted_indices_by_min[axis]->push_back(i);
+			sorted_indices_by_max[axis]->push_back(i);
+		}
 		// In leu of closures, simply assign into globals.
 		// XXX: Not re-entrant. :(
 		global_triangles = all_triangles;
 		global_comparison_axis = axis;
-		sort(sorted_indices[axis]->begin(), sorted_indices[axis]->end(), compare_on_nth_axis);
+		global_use_maxima = false;
+		sort(sorted_indices_by_min[axis]->begin(), sorted_indices_by_min[axis]->end(), compare_on_nth_axis);
+		global_use_maxima = true;
+		sort(sorted_indices_by_max[axis]->begin(), sorted_indices_by_max[axis]->end(), compare_on_nth_axis);
 	}
 	// Actually build the tree!
-	root = new kdTreeNode(0, sorted_indices, all_triangles);
+	root = new kdTreeNode(0, sorted_indices_by_min, sorted_indices_by_max, all_triangles);
 	// Free our scratches.
-	for (int axis = 0; axis < 3; axis++)
-		delete sorted_indices[axis];
+	for (int axis = 0; axis < 3; axis++) {
+		delete sorted_indices_by_min[axis];
+		delete sorted_indices_by_max[axis];
+	}
 }
 
 kdTree::~kdTree() {

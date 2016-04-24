@@ -72,6 +72,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test++) {
 			Real sample_sh = (*all_triangles)[all_our_indices[tri_test]].aabb.maxima(potential_split_axis);
 			// Verify the validity of binary search by guaranteeing that below/aboveness is monotonic.
+			/*
 			for (int minmax = 0; minmax < 2; minmax++) {
 				bool prev_value = minmax == 0;
 				for (unsigned int i = 0; i < triangle_count; i++) {
@@ -90,6 +91,7 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 					prev_value = condition;
 				}
 			}
+			*/
 			// Apply binary search to count in log(n) time how many triangles will be above and how many will be below.
 			int count_on_side[2] = {0, 0};
 			for (int minmax = 0; minmax < 2; minmax++) {
@@ -115,16 +117,13 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 							low = mid;
 					}
 // */
-//					if (minmax == 0 ? coord <= sample_sh : coord > sample_sh)
-//						low = mid;
-//					else
-//						high = mid;
 				}
 				if (minmax == 0)
 					count_on_side[minmax] = low + 1;
 				else
 					count_on_side[minmax] = triangle_count - high;
 			}
+			/*
 			int count_below = 0, count_above = 0;
 			for (unsigned int i = 0; i < triangle_count; i++) {
 				int triangle_index = all_our_indices[i];
@@ -146,7 +145,8 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 			}
 			assert(count_on_side[0] == count_below);
 			assert(count_on_side[1] == count_above);
-			Real score = real_max(count_above, count_below);
+			*/
+			Real score = real_max(count_on_side[0], count_on_side[1]);
 			if (score < best_sh_score) {
 				best_sh_so_far = sample_sh;
 				best_sh_axis = potential_split_axis;

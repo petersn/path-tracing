@@ -32,7 +32,6 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 	unsigned int triangle_count = sorted_indices_by_min[0]->size();
 	// Store the total number of triangles from here on down in the tree.
 	managed_triangles = triangle_count;
-	cout << endl;
 	assert(triangle_count == sorted_indices_by_min[1]->size() and triangle_count == sorted_indices_by_min[2]->size());
 	assert(triangle_count == sorted_indices_by_max[0]->size() and triangle_count == sorted_indices_by_max[1]->size() and triangle_count == sorted_indices_by_max[2]->size());
 	// Debug: Confirm that our input lists are sorted.
@@ -65,24 +64,88 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 	stored_triangles = 0;
 	triangles = nullptr;
 	// Find the best split height and axis.
-	Real best_sh_so_far;
-	int best_sh_axis;
+	// We initialize best_sh_so_far and best_sh_axis only to suppress compiler warnings -- these values should never be used.
+	Real best_sh_so_far = 0.0;
+	int best_sh_axis = -1;
 	Real best_sh_score = FLOAT_INF;
 	for (int potential_split_axis = 0; potential_split_axis < 3; potential_split_axis++) {
 		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test++) {
 			Real sample_sh = (*all_triangles)[all_our_indices[tri_test]].aabb.maxima(potential_split_axis);
-			int count_above = 0, count_below = 0;
+			// Verify the validity of binary search by guaranteeing that below/aboveness is monotonic.
+			for (int minmax = 0; minmax < 2; minmax++) {
+				bool prev_value = minmax == 0;
+				for (unsigned int i = 0; i < triangle_count; i++) {
+					int triangle_index = (*sorted_indices_by[minmax][potential_split_axis])[i];
+					Triangle& tri = (*all_triangles)[triangle_index];
+					// Figure out of this triangle is crossing the boundary, above, or below.
+					bool condition;
+					if (minmax == 0)
+						condition = tri.aabb.minima(potential_split_axis) <= sample_sh;
+					else
+						condition = tri.aabb.maxima(potential_split_axis) > sample_sh;
+					if (minmax == 0)
+						assert((not condition) or prev_value);
+					else
+						assert(condition or not prev_value);
+					prev_value = condition;
+				}
+			}
+			// Apply binary search to count in log(n) time how many triangles will be above and how many will be below.
+			int count_on_side[2] = {0, 0};
+			for (int minmax = 0; minmax < 2; minmax++) {
+				unsigned int low = 0, high = triangle_count;
+				while (low + 1 < high) {
+					unsigned int mid = (low + high) / 2;
+					int triangle_index = (*sorted_indices_by[minmax][potential_split_axis])[mid];
+					Triangle& tri = (*all_triangles)[triangle_index];
+					Real coord = minmax == 0 ? tri.aabb.minima(potential_split_axis) : tri.aabb.maxima(potential_split_axis);
+					// If you check very carefully, the following line is actually equivalent to the commented out block that follows.
+					// The commented out block that follows is clearly the correct behavior, so I leave this line.
+					(coord <= sample_sh ? low : high) = mid;
+/*
+					if (minmax == 0) {
+						if (coord <= sample_sh)
+							low = mid;
+						else
+							high = mid;
+					} else {
+						if (coord > sample_sh)
+							high = mid;
+						else
+							low = mid;
+					}
+// */
+//					if (minmax == 0 ? coord <= sample_sh : coord > sample_sh)
+//						low = mid;
+//					else
+//						high = mid;
+				}
+				if (minmax == 0)
+					count_on_side[minmax] = low + 1;
+				else
+					count_on_side[minmax] = triangle_count - high;
+			}
+			int count_below = 0, count_above = 0;
 			for (unsigned int i = 0; i < triangle_count; i++) {
 				int triangle_index = all_our_indices[i];
 				Triangle& tri = (*all_triangles)[triangle_index];
 				// Figure out of this triangle is crossing the boundary, above, or below.
 				bool overlaps_below = tri.aabb.minima(potential_split_axis) <= sample_sh;
 				bool overlaps_above = tri.aabb.maxima(potential_split_axis) > sample_sh;
-				if (overlaps_above)
-					count_above++;
 				if (overlaps_below)
 					count_below++;
+				if (overlaps_above)
+					count_above++;
 			}
+			// Make sure our binary search worked, for now!
+			if (count_on_side[0] != count_below) {
+				cout << "BS: " << count_on_side[0] << " Raw below: " << count_below << endl;
+			}
+			if (count_on_side[1] != count_above) {
+				cout << "BS: " << count_on_side[1] << " Raw above: " << count_above << endl;
+			}
+			assert(count_on_side[0] == count_below);
+			assert(count_on_side[1] == count_above);
 			Real score = real_max(count_above, count_below);
 			if (score < best_sh_score) {
 				best_sh_so_far = sample_sh;

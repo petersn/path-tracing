@@ -9,7 +9,6 @@
 #include "utils.h"
 
 class kdTreeNode {
-public: // XXX: Also for debugging.
 	int depth;
 	int split_axis;
 	Real split_height;
@@ -29,11 +28,11 @@ public:
 };
 
 class kdTree {
-public: // XXX: For temporary debugging.
-	kdTreeNode* root;
 	std::vector<Triangle>* all_triangles;
 
 public:
+	kdTreeNode* root;
+
 	kdTree(std::vector<Triangle>* all_triangles);
 	~kdTree();
 };

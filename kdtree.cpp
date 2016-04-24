@@ -81,8 +81,8 @@ kdTreeNode::kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<
 					Triangle& tri = (*all_triangles)[triangle_index];
 					Real coord = minmax == 0 ? tri.aabb.minima(potential_split_axis) : tri.aabb.maxima(potential_split_axis);
 					// If you check very carefully, the following line is actually equivalent to the obvious implementation, as given by this command:
-					// python -c 'print "eJxTUMAEmWkKGrmZebmJFQq2tgoGmgrVXFhUwZUm5+cXpSjY2CoUJ+YW5KTGF2do4lQPAjn55Qq\
-					// 2CrmZKdY4laXmFKfiNSMjMz0DnyG1YCOIcrgdse4mZCdRDifg+VouAAh/Svc=".decode("base64").decode("zlib")'
+					/* python -c 'print "eJxTUMAEmWkKGrmZebmJFQq2tgoGmgrVXFhUwZUm5+cXpSjY2CoUJ+YW5KTGF2do4lQPAjn55Qq\
+					2CrmZKdY4laXmFKfiNSMjMz0DnyG1YCOIcrgdse4mZCdRDifg+VouAAh/Svc=".decode("base64").decode("zlib")' */
 					(coord <= sample_sh ? low : high) = mid;
 				}
 				if (minmax == 0)

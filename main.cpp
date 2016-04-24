@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
 	// Do a parallel render.
 	#pragma omp parallel for
-	for (int frame = 0; frame < 20; frame++) {
+	for (int frame = 10; frame < 11; frame++) {
 		// Make a canvas.
 		auto canv = new Canvas(1366, 768);
 		canv->zero();
@@ -44,11 +44,11 @@ int main(int argc, char** argv) {
 			for (int x = 0; x < canv->width; x++) {
 				Real dx = (x - canv->width/2) * 0.001;
 				Real dy = (y - canv->height/2) * 0.001;
-				Ray ray(Vec(-2, + (frame - 10) * 0.2, 2), Vec(1, dx, dy));
+				Ray ray(Vec(-2, + (frame - 10) * 0.2, 0), Vec(1, dx, dy));
 				Real param;
 				bool result = tree->ray_test(ray, param);
 				if (result)
-					*canv->pixel_ptr(x, y) += Vec(1, 1, 1);
+					*canv->pixel_ptr(x, y) += Vec(param / 5.0, param / 5.0, param / 5.0);
 			}
 		}
 		char buf[80];

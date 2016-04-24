@@ -181,12 +181,10 @@ kdTreeNode::~kdTreeNode() {
 bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter) {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray)) {
-//		cout << "AABB cull at depth " << depth << endl;
 		return false;
 	}
 	// If we're a leaf we simply try intersecting against all of our triangles.
 	if (is_leaf) {
-//		cout << "Checking at depth " << depth << endl;
 		bool overall_result = false;
 		Real best_hit_parameter = FLOAT_INF;
 		for (int i = 0; i < stored_triangle_count; i++) {
@@ -208,14 +206,11 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter) {
 	kdTreeNode* near_side = on_high_side ? high_side : low_side;
 	kdTreeNode* far_side  = on_high_side ? low_side : high_side;
 	if (near_side != nullptr) {
-//		cout << "Near at depth " << depth << endl;
 		if (near_side->ray_test(ray, hit_parameter))
 			return true;
 	}
-	if (far_side != nullptr) {
-//		cout << "Far at depth " << depth << endl;
+	if (far_side != nullptr)
 		return far_side->ray_test(ray, hit_parameter);
-	}
 	return false;
 }
 

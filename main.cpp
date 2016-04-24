@@ -36,6 +36,21 @@ int main(int argc, char** argv) {
 
 	// Make a canvas.
 	auto canv = new Canvas(1920, 1080);
+	canv->zero();
+
+	// Do a primitive render.
+	for (int y = 0; y < canv->height; y++) {
+		for (int x = 0; x < canv->width; x++) {
+			Real dx = (x - canv->width/2) * 0.001;
+			Real dy = (y - canv->height/2) * 0.001;
+			Ray ray(Vec(-2, 0, 2), Vec(1, dx, dy));
+			Real param;
+			bool result = tree->ray_test(ray, param);
+			if (result)
+				*canv->pixel_ptr(x, y) += Vec(1, 1, 1);
+		}
+	}
+
 	canv->save("output.png");
 
 	delete tree;

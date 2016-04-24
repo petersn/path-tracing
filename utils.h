@@ -9,8 +9,14 @@
 
 extern long long triangle_tests;
 
+#ifdef DOUBLE_PRECISION
+typedef double Real;
+typedef Eigen::Vector3d Vec;
+#else
 typedef float Real;
 typedef Eigen::Vector3f Vec;
+#endif
+
 typedef Eigen::Matrix<Real, 3, 3> Mat;
 typedef Vec Color;
 

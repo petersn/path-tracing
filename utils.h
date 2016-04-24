@@ -7,6 +7,8 @@
 
 #define FLOAT_INF (1e100)
 
+extern long long triangle_tests;
+
 typedef float Real;
 typedef Eigen::Vector3f Vec;
 typedef Eigen::Matrix<Real, 3, 3> Mat;
@@ -47,6 +49,9 @@ struct CastingRay {
 struct AABB {
 	Vec minima, maxima;
 
+	// The default initializer sets minima and maxima to +inf and -inf (an invalid AABB) so that updating from there sets it.
+	// Beware of this.
+	AABB();
 	void set_to_point(Vec p);
 	void update(Vec p);
 	void update(const AABB& other);
@@ -58,7 +63,6 @@ struct Triangle {
 	Vec edge01, edge02;
 	Vec normal;
 	AABB aabb;
-	bool from_split;
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);

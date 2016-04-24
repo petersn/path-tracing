@@ -4,6 +4,8 @@
 
 #define EPSILON 1e-4
 
+long long triangle_tests;
+
 Ray::Ray() {
 	origin = Vec(0, 0, 0);
 	direction = Vec(0, 0, 1);
@@ -22,6 +24,13 @@ CastingRay::CastingRay(const Ray& _ray) {
 	ray = _ray;
 	for (int i = 0; i < 3; i++)
 		recip_deltas(i) = 1.0 / ray.direction(i);
+}
+
+AABB::AABB() {
+	// These are invalid bounds!
+	// We set these simply so that updating an initialized AABB effectively sets it to the first point.
+	minima = Vec(FLOAT_INF, FLOAT_INF, FLOAT_INF);
+	maxima = -minima;
 }
 
 void AABB::set_to_point(Vec p) {
@@ -67,11 +76,11 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 	aabb.set_to_point(p0);
 	aabb.update(p1);
 	aabb.update(p2);
-	from_split = false;
 }
 
 // Performs M\"oller-Trumbore intersection as per Wikipedia.
 bool Triangle::ray_test(const Ray& ray, Real& hit_parameter) {
+	triangle_tests++;
 	Vec P = ray.direction.cross(edge02);
 	Real det = edge01.dot(P);
 	if (det > -EPSILON and det < EPSILON)

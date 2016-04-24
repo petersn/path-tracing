@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
 		sprintf(buf, "output/frame%03i.png", frame);
 		canv->save(buf);
 		delete canv;
+		cout << "Saved to " << buf << endl;
 	}
 
 	delete tree;

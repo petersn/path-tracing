@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-#define EPSILON 1e-4
+#define EPSILON 1e-8
 
 using namespace std;
 #include <iostream>

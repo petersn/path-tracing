@@ -243,7 +243,8 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 
 			// Compute the ray parameter of the split plane.
 			Real split_plane_ray_parameter_times_slope_towards_plane = split_height - ray.origin(split_axis);
-			if (hit_parameter * ray.direction(split_axis) > split_plane_ray_parameter_times_slope_towards_plane) {
+			bool hit_above_plane = hit_parameter * ray.direction(split_axis) > split_plane_ray_parameter_times_slope_towards_plane;
+			if (on_high_side != hit_above_plane) {
 				Real temp_hit_parameter;
 				// If we end up having no far side we can just fall through.
 				if (far_side != nullptr) {

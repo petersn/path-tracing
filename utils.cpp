@@ -90,13 +90,15 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 	edge02 = p2 - p0;
 	normal = edge01.cross(edge02);
 	normal.normalize();
+	// In theory these three plane parameters should be equal, but let's average them.
+	plane_parameter = (normal.dot(p0) + normal.dot(p1) + normal.dot(p2)) / 3.0;
 	aabb.set_to_point(p0);
 	aabb.update(p1);
 	aabb.update(p2);
 }
 
 // Performs M\"oller-Trumbore intersection as per Wikipedia.
-bool Triangle::ray_test(const Ray& ray, Real& hit_parameter) {
+bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
 	triangle_tests++;
 	Vec P = ray.direction.cross(edge02);
 	Real det = edge01.dot(P);
@@ -116,7 +118,15 @@ bool Triangle::ray_test(const Ray& ray, Real& hit_parameter) {
 		return false;
 	// In this case t is the parameter on the ray of the hit.
 	hit_parameter = t;
+	if (hit_triangle != nullptr)
+		*hit_triangle = this;
 	return true;
+}
+
+Vec Triangle::project_point_to_given_altitude(Vec point, Real desired_altitude) {
+	Real parameter = normal.dot(point);
+	Real change = (plane_parameter - parameter) + desired_altitude;
+	return point + change * normal;
 }
 
 bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) {

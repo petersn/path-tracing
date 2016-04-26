@@ -178,7 +178,7 @@ kdTreeNode::~kdTreeNode() {
 	delete high_side;
 }
 
-bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter) {
+bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray)) {
 		return false;
@@ -187,16 +187,22 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter) {
 	if (is_leaf) {
 		bool overall_result = false;
 		Real best_hit_parameter = FLOAT_INF;
+		Triangle* best_hit_triangle = nullptr;
 		for (int i = 0; i < stored_triangle_count; i++) {
 			Real temp_hit_parameter;
-			bool result = stored_triangles[i].ray_test(ray, temp_hit_parameter);
+			Triangle* temp_hit_triangle;
+			bool result = stored_triangles[i].ray_test(ray, temp_hit_parameter, &temp_hit_triangle);
 			if (result and temp_hit_parameter < best_hit_parameter) {
 				best_hit_parameter = temp_hit_parameter;
+				best_hit_triangle = temp_hit_triangle;
 				overall_result = true;
 			}
 		}
-		if (overall_result)
+		if (overall_result) {
 			hit_parameter = best_hit_parameter;
+			if (hit_triangle != nullptr)
+				*hit_triangle = best_hit_triangle;
+		}
 		return overall_result;
 	}
 	// If not, we perform early out search against our nodes.
@@ -206,11 +212,11 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter) {
 	kdTreeNode* near_side = on_high_side ? high_side : low_side;
 	kdTreeNode* far_side  = on_high_side ? low_side : high_side;
 	if (near_side != nullptr) {
-		if (near_side->ray_test(ray, hit_parameter))
+		if (near_side->ray_test(ray, hit_parameter, hit_triangle))
 			return true;
 	}
 	if (far_side != nullptr)
-		return far_side->ray_test(ray, hit_parameter);
+		return far_side->ray_test(ray, hit_parameter, hit_triangle);
 	return false;
 }
 
@@ -272,7 +278,7 @@ kdTree::~kdTree() {
 	delete root;
 }
 
-bool kdTree::ray_test(const Ray& ray, Real& hit_parameter) {
-	return root->ray_test(ray, hit_parameter);
+bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
+	return root->ray_test(ray, hit_parameter, hit_triangle);
 }
 

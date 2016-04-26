@@ -5,62 +5,22 @@ using namespace std;
 #include <iostream>
 #include <random>
 #include <ctime>
-#include "stlreader.h"
-#include "kdtree.h"
-#include "canvas.h"
-
-#define TOTAL_RAY_CASTS 100000
+#include "integrator.h"
 
 int main(int argc, char** argv) {
-	random_device rd;
-	mt19937 engine(rd());
-	uniform_real_distribution<> dist(-10, 10);
+	// Load up an STL file.
+	auto scene = new Scene(argv[1]);
 
-	cout << "=== snp's path tracing renderer ===" << endl;
+	// Reposition the camera.
+	scene->main_camera.origin = Vec(-5, 0, 2);
 
-	// Read in the input.
-	vector<Triangle>* triangles = read_stl(argv[1]);
-	if (triangles == nullptr) {
-		cerr << "Couldn't read input file." << endl;
-		return 1;
-	}
-	cout << "Read in " << triangles->size() << " triangles." << endl;
+	// Make a light.
+	scene->lights->push_back(Light({Vec(0, 0, -5), 10.0 * Vec(1, 0.5, 0.25)}));
 
-	// Build the kdTree.
-	auto tree = new kdTree(triangles);
-
-	// Print some stats.
-	int deepest = 0, biggest = 0;
-	tree->root->get_stats(deepest, biggest);
-	cerr << "Depth of: " << deepest << " Size: " << biggest << endl;
-
-	// Do a parallel render.
-	#pragma omp parallel for
-	for (int frame = 10; frame < 11; frame++) {
-		// Make a canvas.
-		auto canv = new Canvas(1366, 768);
-		canv->zero();
-		for (int y = 0; y < canv->height; y++) {
-			for (int x = 0; x < canv->width; x++) {
-				Real dx = (x - canv->width/2) * 0.001;
-				Real dy = (y - canv->height/2) * 0.001;
-				Ray ray(Vec(-2, + (frame - 10) * 0.2, 0), Vec(1, dx, dy));
-				Real param;
-				bool result = tree->ray_test(ray, param);
-				if (result)
-					*canv->pixel_ptr(x, y) += Vec(param / 5.0, param / 5.0, param / 5.0);
-			}
-		}
-		char buf[80];
-		sprintf(buf, "output/frame%03i.png", frame);
-		canv->save(buf);
-		delete canv;
-		cout << "Saved to " << buf << endl;
-	}
-
-	delete tree;
-	delete triangles;
-
-	return 0;
+	// Allocate an integrator, and integrate a single pass of the scene.
+	auto integrator = new Integrator(1366, 768, scene);
+	integrator->perform_pass();
+	cout << "Passes per second: " << 1.0 / integrator->last_pass_seconds << endl;
+	integrator->canvas->save("output.png");
 }
 

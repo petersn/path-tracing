@@ -8,8 +8,14 @@
 #include "kdtree.h"
 #include "canvas.h"
 
+struct Light {
+	Vec position;
+	Color color;
+};
+
 struct Scene {
 	vector<Triangle>* mesh;
+	vector<Light>* lights;
 	kdTree* tree;
 	Ray main_camera;
 	Vec scene_up;
@@ -19,16 +25,17 @@ struct Scene {
 	~Scene();
 };
 
-class Integrator {
+struct Integrator {
 	Scene* scene;
 	Canvas* canvas;
 	int passes;
+	double last_pass_seconds;
 	random_device rd;
 	mt19937 engine;
 
 	Color cast_ray(const Ray& ray, int recursions);
+	Ray get_ray_for_pixel(int x, int y);
 
-public:
 	Integrator(int width, int height, Scene* scene);
 	~Integrator();
 	void perform_pass();

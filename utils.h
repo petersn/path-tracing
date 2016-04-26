@@ -69,10 +69,12 @@ struct Triangle {
 	Vec edge01, edge02;
 	Vec normal;
 	AABB aabb;
+	Real plane_parameter;
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);
-	bool ray_test(const Ray& ray, Real& hit_parameter);
+	bool ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle);
+	Vec project_point_to_given_altitude(Vec point, Real desired_altitude);
 	bool intersects_axis_aligned_plane(int axis, Real plane_height);
 };
 

@@ -8,6 +8,7 @@
 #include "utils.h"
 
 class kdTreeNode {
+public:
 	// Depth is 0 for the root of the tree, and increments going down the tree.
 	int depth;
 	// The split axis is 0, 1, or 2, and sets which axis the splitting plane is normal to.

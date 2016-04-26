@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 	// Load up an STL file.
 	scene = new Scene(argv[1]);
 	// Make a light.
-	scene->lights->push_back(Light({Vec(0, 0, 5), 10.0 * Vec(1, 0.5, 0.25)}));
+	scene->lights->push_back(Light({Vec(1, 0.3, 5), 10.0 * Vec(1, 0.5, 0.25)}));
 	// Initialize SDL.
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		fprintf(stderr, "Unable to SDL_Init.\n");

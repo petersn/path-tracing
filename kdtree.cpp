@@ -8,7 +8,7 @@ using namespace std;
 #include <map>
 #include "kdtree.h"
 
-#define LEAF_THRESHOLD 8
+#define LEAF_THRESHOLD 1 //8
 #define MAXIMUM_DEPTH 15
 
 void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles) {
@@ -181,6 +181,7 @@ kdTreeNode::~kdTreeNode() {
 bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray)) {
+//		cout << "AABB fail." << endl;
 		return false;
 	}
 	// If we're a leaf we simply try intersecting against all of our triangles.
@@ -208,15 +209,30 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 	// If not, we perform early out search against our nodes.
 	// Determine which side of the splitting plane the origin of the ray starts on.
 	bool on_high_side = ray.origin(split_axis) > split_height;
+//	if (depth == 0)
+//		on_high_side = true;
+//	on_high_side = not on_high_side;
+//	bool on_high_side_alg2 = ray.direction(split_axis) < 0;
 	Real temp_hit_parameter;
 	kdTreeNode* near_side = on_high_side ? high_side : low_side;
 	kdTreeNode* far_side  = on_high_side ? low_side : high_side;
+//	cout << "Depth: " << depth << " Split plane: " << split_axis << " height " << split_height << " on side: " << on_high_side << endl;
+//	cout << "Hits: [";
+	// See which children's AABBs I intersect.
+//	if (near_side->aabb.does_ray_intersect(ray))
+//		cout << "N";
+//	if (far_side->aabb.does_ray_intersect(ray))
+//		cout << "F";
+//	cout << "]\n";
 	if (near_side != nullptr) {
+//		cout << "Doing near side." << endl;
 		if (near_side->ray_test(ray, hit_parameter, hit_triangle))
 			return true;
 	}
-	if (far_side != nullptr)
+	if (far_side != nullptr) {
+//		cout << "Doing far side." << endl;
 		return far_side->ray_test(ray, hit_parameter, hit_triangle);
+	}
 	return false;
 }
 

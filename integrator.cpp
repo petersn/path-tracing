@@ -1,6 +1,7 @@
 // Monte-Carlo path tracing integrator.
 
 using namespace std;
+#include <sys/time.h>
 #include <iostream>
 #include <ctime>
 #include "integrator.h"
@@ -50,14 +51,18 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 		// Color by lights.
 		for (auto& light : *scene->lights) {
 			// Cast a ray to the light.
+			#if 0
 			Ray shadow_ray(hit, light.position - hit);
 			Real shadow_param;
 			bool shadow_result = scene->tree->ray_test(shadow_ray, shadow_param);
+			#endif
 			Real distance_to_light = (light.position - hit).norm();
+			#if 0
 			if ((not shadow_result) /*or shadow_param > distance_to_light*/) {
 				// Light is not obscured -- apply it. */
+			#endif
 				energy += light.color / (distance_to_light * distance_to_light);
-			}
+			//}
 		}
 	}
 	return energy;
@@ -98,17 +103,21 @@ void Integrator::perform_pass() {
 	camera_up.normalize();
 	Real aspect_ratio = canvas->height / (Real) canvas->width;
 
-	clock_t start_time = clock();
+//	clock_t start_time = clock();
 
-//	#pragma omp parallel for
+	struct timeval start, stop, result;
+
+	gettimeofday(&start, NULL);
+
+	#pragma omp parallel for
 	for (int y = 0; y < canvas->height; y++) {
 		for (int x = 0; x < canvas->width; x++) {
 			Real dx = scene->camera_image_plane_width * (x - canvas->width / 2) / (Real) canvas->width;
 			Real dy = -scene->camera_image_plane_width * (y - canvas->height / 2) * aspect_ratio / (Real) canvas->height;
 			// Compute an offset into the image plane that the camera should face.
 			Vec offset = camera_right * dx + camera_up * dy;
-//			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
-			Ray ray = get_ray_for_pixel(x, y);
+			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
+//			Ray ray = get_ray_for_pixel(x, y);
 			// Do the big expensive computation.
 			Color contribution = cast_ray(ray, 0);
 //			Color contribution = Color(0.3, 0.6, 0.7);
@@ -117,7 +126,11 @@ void Integrator::perform_pass() {
 		}
 	}
 
-	last_pass_seconds = (clock() - start_time) / (double) CLOCKS_PER_SEC;
+	gettimeofday(&stop, NULL);
+	timersub(&stop, &start, &result);
+	last_pass_seconds = result.tv_sec + result.tv_usec * 1e-6;
+
+//	last_pass_seconds = (clock() - start_time) / (double) CLOCKS_PER_SEC;
 
 	// Track the number of passes we've performed, so we can normalize at the end.
 	passes++;

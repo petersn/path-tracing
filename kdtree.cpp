@@ -302,7 +302,15 @@ void kdTreeNode::get_stats(int& deepest_depth, int& biggest_set) {
 		high_side->get_stats(deepest_depth, biggest_set);
 }
 
+// Use this storage to prevent multiple threads from calling kdTree::kdTree() at once.
+bool currently_building = false;
+
 kdTree::kdTree(vector<Triangle>* _all_triangles) {
+	if (currently_building) {
+		cerr << "Error: kdTree::kdTree is currently not re-entrant." << endl;
+		assert(false);
+	}
+	currently_building = true;
 	// First we build three lists, sorting the indices of the triangles by their min and max bounds along each of the three axes.
 	all_triangles = _all_triangles;
 	vector<int>* sorted_indices_by_min[3];
@@ -330,6 +338,7 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 		delete sorted_indices_by_min[axis];
 		delete sorted_indices_by_max[axis];
 	}
+	currently_building = false;
 }
 
 kdTree::~kdTree() {

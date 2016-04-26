@@ -178,15 +178,10 @@ kdTreeNode::~kdTreeNode() {
 	delete high_side;
 }
 
-//#define DEBUG
 bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
 	// Do a quick AABB based early out.
-	if (not aabb.does_ray_intersect(ray)) {
-#ifdef DEBUG
-		cout << "AABB fail." << endl;
-#endif
+	if (not aabb.does_ray_intersect(ray))
 		return false;
-	}
 	// If we're a leaf we simply try intersecting against all of our triangles.
 	if (is_leaf) {
 		bool overall_result = false;
@@ -212,28 +207,10 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 	// If not, we perform early out search against our nodes.
 	// Determine which side of the splitting plane the origin of the ray starts on.
 	bool on_high_side = ray.origin(split_axis) > split_height;
-//	on_high_side = true;
-//	if (depth == 0)
-//		on_high_side = true;
-//	on_high_side = not on_high_side;
-//	bool on_high_side_alg2 = ray.direction(split_axis) < 0;
 	Real temp_hit_parameter;
 	kdTreeNode* near_side = on_high_side ? high_side : low_side;
 	kdTreeNode* far_side  = on_high_side ? low_side : high_side;
-#ifdef DEBUG
-	cout << "Depth: " << depth << " Split plane: " << split_axis << " height " << split_height << " on side: " << on_high_side << endl;
-	cout << "Hits: [";
-	// See which children's AABBs I intersect.
-	if (near_side->aabb.does_ray_intersect(ray))
-		cout << "N";
-	if (far_side->aabb.does_ray_intersect(ray))
-		cout << "F";
-	cout << "]\n";
-#endif
 	if (near_side != nullptr) {
-#ifdef DEBUG
-		cout << "Doing near side." << endl;
-#endif
 		if (near_side->ray_test(ray, hit_parameter, hit_triangle)) {
 			// If we hit a near side triangle it is possible that it is a shared near/far triangle.
 			// If this is the case then it is possible that we hit it on the far side in a way that is occluded
@@ -248,16 +225,10 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 				Real temp_hit_parameter;
 				// If we end up having no far side we can just fall through.
 				if (far_side != nullptr) {
-#ifdef DEBUG
-					cout << "Doing nested far side." << endl;
-#endif
 					bool temp_result = far_side->ray_test(ray, temp_hit_parameter, hit_triangle);
 					// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
 					assert(temp_result);
 					if (temp_result) {
-#ifdef DEBUG
-						cout << "We got a far side hit that was better if this is a one: " << (temp_hit_parameter < hit_parameter) << endl;
-#endif
 						// It never makes sense to get a worse collision from a far side hit from the far node.
 						// This is because the near side triangle we hit on the far side must also be a far side triangle!
 						assert(temp_hit_parameter <= hit_parameter);
@@ -269,12 +240,8 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 			return true;
 		}
 	}
-	if (far_side != nullptr) {
-#ifdef DEBUG
-		cout << "Doing far side." << endl;
-#endif
+	if (far_side != nullptr)
 		return far_side->ray_test(ray, hit_parameter, hit_triangle);
-	}
 	return false;
 }
 

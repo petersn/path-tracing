@@ -8,7 +8,7 @@ using namespace std;
 #include <map>
 #include "kdtree.h"
 
-#define LEAF_THRESHOLD 1 //8
+#define LEAF_THRESHOLD 8
 #define MAXIMUM_DEPTH 15
 
 void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles) {

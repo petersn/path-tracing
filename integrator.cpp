@@ -52,6 +52,7 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 		Vec hit = ray.origin + param * ray.direction;
 		// Lift the point off the surface.
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
+		Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
 		if (recursions > 0) {
 			// Compute a Lambertianly scattered ray.
 			Vec local_scatter_direction = sample_unit_sphere(engine);
@@ -60,6 +61,7 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 			Vec d1 = hit_triangle->edge01.normalized();
 			Vec d2 = hit_triangle->normal.cross(d1);
 			Vec scatter_direction = local_scatter_direction(0) * hit_triangle->normal + local_scatter_direction(1) * d1 + local_scatter_direction(2) * d2;
+//			Vec scatter_direction = reflection;
 			Ray scattered_ray(hit, scatter_direction);
 			// Recursively sample the scattered light.
 			energy += 0.8 * cast_ray(scattered_ray, recursions-1);
@@ -77,7 +79,6 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 				Color contribution = light.color / (distance_to_light * distance_to_light);
 				// Now we modulate the contribution by our surface shaders.
 				Real lambertian_coef = hit_triangle->normal.dot(to_light) / distance_to_light;
-				Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
 				reflection.normalize();
 				Real phong_coef = real_max(0.0, reflection.dot(to_light) / distance_to_light);
 				phong_coef = square(square(square(square(phong_coef))));
@@ -127,6 +128,13 @@ void Integrator::perform_pass() {
 
 	gettimeofday(&start, NULL);
 
+	// Used for DOF offsets.
+	// NB: By using a normal here I effectively have an aperature with a Gaussian response across its surface.
+	// This is a really weird assumption to make!
+	normal_distribution<> dist(0, 1);
+	Real plane_of_focus_distance = 4.5;
+	Real dof_dispersion = 0.25 / 3.0;
+
 	#pragma omp parallel for
 	for (int y = 0; y < canvas->height; y++) {
 		for (int x = 0; x < canvas->width; x++) {
@@ -135,6 +143,12 @@ void Integrator::perform_pass() {
 			// Compute an offset into the image plane that the camera should face.
 			Vec offset = camera_right * dx + camera_up * dy;
 			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
+			Real dof_x_offset = dist(engine) * dof_dispersion;
+			Real dof_y_offset = dist(engine) * dof_dispersion;
+			ray.origin += dof_x_offset * camera_right;
+			ray.origin += dof_y_offset * camera_up;
+			ray.direction -= (dof_x_offset / plane_of_focus_distance) * camera_right;
+			ray.direction -= (dof_y_offset / plane_of_focus_distance) * camera_up;
 			// Do the big expensive computation.
 			Color contribution = cast_ray(ray, 2);
 			// Accumulate the energy into our buffer.

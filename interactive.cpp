@@ -74,7 +74,7 @@ void main_loop(void) {
 			rendered_for = counter;
 		}
 		integrator->perform_pass();
-		cout << "Time: " << integrator->last_pass_seconds << " Rays cast: " << rays_cast << " MT calls: " << triangle_tests << " MTs per pixel: " << triangle_tests / (float) (screen_width * screen_height) << endl;
+		cout << "Pass: " << integrator->passes << " Time: " << integrator->last_pass_seconds << " Rays cast: " << rays_cast << " MT calls: " << triangle_tests << " MTs per pixel: " << triangle_tests / (float) (screen_width * screen_height) << endl;
 
 		// Once we're done handling all the key presses, draw some random shit.
 		if (left_held)
@@ -139,8 +139,8 @@ int main(int argc, char** argv) {
 	// Of course, if you want a smaller window, set these to other values.
 //	screen_width  = info->current_w;
 //	screen_height = info->current_h;
-	screen_width = 1920;
-	screen_height = 1080;
+	screen_width = 1366;
+	screen_height = 768;
 	int video_flags = 0;
 	// These guys aren't super critical, but change video performance/behavior on some systems.
 	video_flags |= SDL_GL_DOUBLEBUFFER;

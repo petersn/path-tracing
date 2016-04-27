@@ -52,13 +52,25 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 		Vec hit = ray.origin + param * ray.direction;
 		// Lift the point off the surface.
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
+		if (recursions > 0) {
+			// Compute a Lambertianly scattered ray.
+			Vec local_scatter_direction = sample_unit_sphere(engine);
+			local_scatter_direction(0) = real_abs(local_scatter_direction(0));
+			// Convert the triangle-local direction into global coordinates.
+			Vec d1 = hit_triangle->edge01.normalized();
+			Vec d2 = hit_triangle->normal.cross(d1);
+			Vec scatter_direction = local_scatter_direction(0) * hit_triangle->normal + local_scatter_direction(1) * d1 + local_scatter_direction(2) * d2;
+			Ray scattered_ray(hit, scatter_direction);
+			// Recursively sample the scattered light.
+			energy += 0.8 * cast_ray(scattered_ray, recursions-1);
+		}
 		// Color by lights.
 		for (auto& light : *scene->lights) {
 			// Cast a ray to the light.
-			Ray shadow_ray(hit, light.position - hit);
+			Vec to_light = light.position - hit;
+			Ray shadow_ray(hit, to_light);
 			Real shadow_param;
 			bool shadow_result = scene->tree->ray_test(shadow_ray, shadow_param);
-			Vec to_light = light.position - hit;
 			Real distance_to_light = to_light.norm();
 			if ((not shadow_result) or shadow_param > distance_to_light) {
 				// Light is not obscured -- apply it.
@@ -124,7 +136,7 @@ void Integrator::perform_pass() {
 			Vec offset = camera_right * dx + camera_up * dy;
 			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
 			// Do the big expensive computation.
-			Color contribution = cast_ray(ray, 0);
+			Color contribution = cast_ray(ray, 2);
 			// Accumulate the energy into our buffer.
 			*canvas->pixel_ptr(x, y) += contribution;
 		}

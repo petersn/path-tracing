@@ -10,11 +10,12 @@ using namespace std;
 int screen_width, screen_height;
 SDL_Surface* screen;
 bool left_held = false, right_held = false;
-int counter = 0, rendered_for = -1;
+int counter = 20, rendered_for = -1;
 Scene* scene;
 Integrator* integrator;
 
 void main_loop(void) {
+	Real gain;
 	while (1) {
 		// We begin each loop by getting events.
 		SDL_Event ev;
@@ -43,6 +44,12 @@ void main_loop(void) {
 						left_held = 1;
 					} else if (ev.key.keysym.sym == SDLK_RIGHT) {
 						right_held = 1;
+					} else if (ev.key.keysym.sym == SDLK_SPACE) {
+						integrator->canvas->gain = gain;
+						char path[80];
+						sprintf(path, "render_passes=%04i.png", integrator->passes);
+						integrator->canvas->save(path);
+						cout << "Saved to " << path << endl;
 					}
 					break;
 				case SDL_KEYUP:
@@ -63,10 +70,11 @@ void main_loop(void) {
 		if (rendered_for != counter) {
 			triangle_tests = 0;
 			integrator->canvas->zero();
-			integrator->perform_pass();
-			cout << "Time: " << integrator->last_pass_seconds << " MT calls: " << triangle_tests << " MTs per pixel: " << triangle_tests / (float) (screen_width * screen_height) << endl;
+			integrator->passes = 0;
 			rendered_for = counter;
 		}
+		integrator->perform_pass();
+		cout << "Time: " << integrator->last_pass_seconds << " Rays cast: " << rays_cast << " MT calls: " << triangle_tests << " MTs per pixel: " << triangle_tests / (float) (screen_width * screen_height) << endl;
 
 		// Once we're done handling all the key presses, draw some random shit.
 		if (left_held)
@@ -82,6 +90,7 @@ void main_loop(void) {
 		Color* pixels = integrator->canvas->pixels;
 		int height = screen_height;
 		int width = screen_width;
+		gain = 255.0 / integrator->passes;
 		for (y = 0; y < screen_height; y++) {
 			for (x = 0; x < screen_width; x++) {
 				unsigned char* pixel_pointer = ((unsigned char*)screen->pixels) + 4*(x + y*width);
@@ -90,7 +99,7 @@ void main_loop(void) {
 //				integrator->canvas->get_pixel(x, y, (uint8_t*)pixel_pointer);
 				Color c = pixels[x + y * width];
 				for (int i = 0; i < 3; i++)
-					pixel_pointer[i] = (unsigned char)real_max(0.0, real_min(255.0, (Real)(c(i) * 255)));
+					pixel_pointer[i] = (unsigned char)real_max(0.0, real_min(255.0, (Real)(c(i) * gain)));
 
 //				pixel_pointer[0] = counter + x*x*y*y*y;
 //				pixel_pointer[1] = y-x + counter;
@@ -111,8 +120,10 @@ int main(int argc, char** argv) {
 	// Load up an STL file.
 	scene = new Scene(argv[1]);
 	// Make a light.
-	scene->lights->push_back(Light({Vec(0, 0, 3), 10.0 * Vec(1, 0.5, 0.25)}));
-	scene->camera_image_plane_width = 0.5;
+	scene->lights->push_back(Light({Vec(0, 0, 3), 7.0 * Vec(0.8, 0.5, 0.25)}));
+	scene->lights->push_back(Light({Vec(-2, 2, 4), 7.0 * Vec(0.25, 0.8, 0.25)}));
+	scene->lights->push_back(Light({Vec(-2, -2, 4), 7.0 * Vec(0.25, 0.25, 0.8)}));
+	scene->camera_image_plane_width = 0.5 * 1.5;
 	// Initialize SDL.
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		fprintf(stderr, "Unable to SDL_Init.\n");
@@ -128,8 +139,8 @@ int main(int argc, char** argv) {
 	// Of course, if you want a smaller window, set these to other values.
 //	screen_width  = info->current_w;
 //	screen_height = info->current_h;
-	screen_width = 640;
-	screen_height = 640;
+	screen_width = 1920;
+	screen_height = 1080;
 	int video_flags = 0;
 	// These guys aren't super critical, but change video performance/behavior on some systems.
 	video_flags |= SDL_GL_DOUBLEBUFFER;

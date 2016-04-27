@@ -9,7 +9,7 @@ using namespace std;
 #include "kdtree.h"
 
 #define LEAF_THRESHOLD 8
-#define MAXIMUM_DEPTH 15 //8
+#define MAXIMUM_DEPTH 17 //8
 
 void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles) {
 	unsigned int triangle_count = indices->size();
@@ -315,7 +315,10 @@ kdTree::~kdTree() {
 	delete root;
 }
 
+long long rays_cast = 0;
+
 bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
+	rays_cast++;
 	return root->ray_test(ray, hit_parameter, hit_triangle);
 }
 

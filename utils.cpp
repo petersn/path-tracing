@@ -134,3 +134,13 @@ bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) {
 	return true;
 }
 
+Vec sample_unit_sphere(mt19937& engine) {
+	// I experimentally determined that instantiating this object costs about as much as actually drawing from the distribution once.
+	// Thus, I could get maybe a 33% performance improvement by hoisting this out of the loop by moving this distribution into the Integrator object.
+	normal_distribution<> dist(0, 1);
+	// Technically this next line leaves the evaluation order unspecified, so a seeded render could render differently on different compiled binaries for different platforms. For now I don't care.
+	Vec samples(dist(engine), dist(engine), dist(engine));
+	samples.normalize();
+	return samples;
+}
+

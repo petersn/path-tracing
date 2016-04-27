@@ -7,6 +7,8 @@
 #include <map>
 #include "utils.h"
 
+extern long long rays_cast;
+
 class kdTreeNode {
 public:
 	// Depth is 0 for the root of the tree, and increments going down the tree.

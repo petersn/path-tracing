@@ -3,6 +3,7 @@
 #ifndef _RENDER_UTILS_H
 #define _RENDER_UTILS_H
 
+#include <random>
 #include <Eigen/Dense>
 
 #define FLOAT_INF (1e100)
@@ -12,9 +13,11 @@ extern long long triangle_tests;
 #ifdef DOUBLE_PRECISION
 typedef double Real;
 typedef Eigen::Vector3d Vec;
+#define real_abs fabs
 #else
 typedef float Real;
 typedef Eigen::Vector3f Vec;
+#define real_abs fabsf
 #endif
 
 typedef Eigen::Matrix<Real, 3, 3> Mat;
@@ -77,6 +80,8 @@ struct Triangle {
 	Vec project_point_to_given_altitude(Vec point, Real desired_altitude);
 	bool intersects_axis_aligned_plane(int axis, Real plane_height);
 };
+
+Vec sample_unit_sphere(std::mt19937& engine);
 
 #endif
 

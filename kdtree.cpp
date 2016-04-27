@@ -9,7 +9,7 @@ using namespace std;
 #include "kdtree.h"
 
 #define LEAF_THRESHOLD 8
-#define MAXIMUM_DEPTH 15
+#define MAXIMUM_DEPTH 15 //8
 
 void kdTreeNode::form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles) {
 	unsigned int triangle_count = indices->size();
@@ -227,11 +227,14 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 				if (far_side != nullptr) {
 					bool temp_result = far_side->ray_test(ray, temp_hit_parameter, hit_triangle);
 					// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
-					assert(temp_result);
+//					assert(temp_result);
 					if (temp_result) {
 						// It never makes sense to get a worse collision from a far side hit from the far node.
 						// This is because the near side triangle we hit on the far side must also be a far side triangle!
-						assert(temp_hit_parameter <= hit_parameter);
+//						if (temp_hit_parameter > hit_parameter) {
+//							cout << temp_hit_parameter << " " << hit_parameter << "\n";
+//						}
+//						assert(temp_hit_parameter <= hit_parameter);
 						hit_parameter = temp_hit_parameter;
 					}
 				}

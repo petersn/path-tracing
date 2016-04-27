@@ -39,6 +39,10 @@ Scene::~Scene() {
 	delete tree;
 }
 
+static inline Real square(Real x) {
+	return x*x;
+}
+
 Color Integrator::cast_ray(const Ray& ray, int recursions) {
 	Real param;
 	Triangle* hit_triangle;
@@ -51,18 +55,22 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 		// Color by lights.
 		for (auto& light : *scene->lights) {
 			// Cast a ray to the light.
-			#if 0
 			Ray shadow_ray(hit, light.position - hit);
 			Real shadow_param;
 			bool shadow_result = scene->tree->ray_test(shadow_ray, shadow_param);
-			#endif
-			Real distance_to_light = (light.position - hit).norm();
-			#if 0
-			if ((not shadow_result) /*or shadow_param > distance_to_light*/) {
-				// Light is not obscured -- apply it. */
-			#endif
-				energy += light.color / (distance_to_light * distance_to_light);
-			//}
+			Vec to_light = light.position - hit;
+			Real distance_to_light = to_light.norm();
+			if ((not shadow_result) or shadow_param > distance_to_light) {
+				// Light is not obscured -- apply it.
+				Color contribution = light.color / (distance_to_light * distance_to_light);
+				// Now we modulate the contribution by our surface shaders.
+				Real lambertian_coef = hit_triangle->normal.dot(to_light) / distance_to_light;
+				Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
+				reflection.normalize();
+				Real phong_coef = real_max(0.0, reflection.dot(to_light) / distance_to_light);
+				phong_coef = square(square(square(square(phong_coef))));
+				energy += contribution * (lambertian_coef + phong_coef);
+			}
 		}
 	}
 	return energy;
@@ -103,8 +111,6 @@ void Integrator::perform_pass() {
 	camera_up.normalize();
 	Real aspect_ratio = canvas->height / (Real) canvas->width;
 
-//	clock_t start_time = clock();
-
 	struct timeval start, stop, result;
 
 	gettimeofday(&start, NULL);
@@ -117,10 +123,8 @@ void Integrator::perform_pass() {
 			// Compute an offset into the image plane that the camera should face.
 			Vec offset = camera_right * dx + camera_up * dy;
 			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
-//			Ray ray = get_ray_for_pixel(x, y);
 			// Do the big expensive computation.
 			Color contribution = cast_ray(ray, 0);
-//			Color contribution = Color(0.3, 0.6, 0.7);
 			// Accumulate the energy into our buffer.
 			*canvas->pixel_ptr(x, y) += contribution;
 		}
@@ -129,8 +133,6 @@ void Integrator::perform_pass() {
 	gettimeofday(&stop, NULL);
 	timersub(&stop, &start, &result);
 	last_pass_seconds = result.tv_sec + result.tv_usec * 1e-6;
-
-//	last_pass_seconds = (clock() - start_time) / (double) CLOCKS_PER_SEC;
 
 	// Track the number of passes we've performed, so we can normalize at the end.
 	passes++;

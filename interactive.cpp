@@ -56,9 +56,10 @@ void main_loop(void) {
 
 		// Reposition the camera.
 		Real angle = counter * 0.05;
-		scene->main_camera.origin = -5 * Vec(cos(angle), sin(angle), -0.4);
+		scene->main_camera.origin = -5 * Vec(cos(angle), sin(angle), 0.0);
 		scene->main_camera.direction = -scene->main_camera.origin;
 		scene->main_camera.direction.normalize();
+		scene->main_camera.origin += Vec(0.0, 0.0, 0.2);
 		if (rendered_for != counter) {
 			triangle_tests = 0;
 			integrator->canvas->zero();
@@ -110,7 +111,8 @@ int main(int argc, char** argv) {
 	// Load up an STL file.
 	scene = new Scene(argv[1]);
 	// Make a light.
-	scene->lights->push_back(Light({Vec(1, 0.3, 5), 10.0 * Vec(1, 0.5, 0.25)}));
+	scene->lights->push_back(Light({Vec(0, 0, 3), 10.0 * Vec(1, 0.5, 0.25)}));
+	scene->camera_image_plane_width = 0.5;
 	// Initialize SDL.
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		fprintf(stderr, "Unable to SDL_Init.\n");

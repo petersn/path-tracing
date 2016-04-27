@@ -9,7 +9,10 @@ example: kdtree.o utils.o stlreader.o canvas.o integrator.o main.o
 	g++ -o $@ $^ -lpng -fopenmp
 
 interactive: kdtree.o utils.o stlreader.o canvas.o integrator.o interactive.o
-	g++ -o $@ $^ -lpng -fopenmp `sdl-config --libs` 
+	g++ -o $@ $^ -lpng -fopenmp `sdl-config --libs`
+
+animate: kdtree.o utils.o stlreader.o canvas.o integrator.o animate.o
+	g++ -o $@ $^ -lpng -fopenmp `sdl-config --libs`
 
 .PHONY: clean
 clean:

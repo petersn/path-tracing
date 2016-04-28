@@ -33,7 +33,7 @@ struct Integrator {
 	random_device rd;
 	mt19937 engine;
 
-	Color cast_ray(const Ray& ray, int recursions);
+	Color cast_ray(const Ray& ray, int recursions, int branches);
 	Ray get_ray_for_pixel(int x, int y);
 
 	Integrator(int width, int height, Scene* scene);

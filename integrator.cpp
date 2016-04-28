@@ -43,7 +43,7 @@ static inline Real square(Real x) {
 	return x*x;
 }
 
-Color Integrator::cast_ray(const Ray& ray, int recursions) {
+Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 	Real param;
 	Triangle* hit_triangle;
 	bool result = scene->tree->ray_test(ray, param, &hit_triangle);
@@ -54,17 +54,19 @@ Color Integrator::cast_ray(const Ray& ray, int recursions) {
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
 		Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
 		if (recursions > 0) {
-			// Compute a Lambertianly scattered ray.
-			Vec local_scatter_direction = sample_unit_sphere(engine);
-			local_scatter_direction(0) = real_abs(local_scatter_direction(0));
-			// Convert the triangle-local direction into global coordinates.
-			Vec d1 = hit_triangle->edge01.normalized();
-			Vec d2 = hit_triangle->normal.cross(d1);
-			Vec scatter_direction = local_scatter_direction(0) * hit_triangle->normal + local_scatter_direction(1) * d1 + local_scatter_direction(2) * d2;
-//			Vec scatter_direction = reflection;
-			Ray scattered_ray(hit, scatter_direction);
-			// Recursively sample the scattered light.
-			energy += 0.8 * cast_ray(scattered_ray, recursions-1);
+			for (int branch = 0; branch < branches; branch++) {
+				// Compute a Lambertianly scattered ray.
+				Vec local_scatter_direction = sample_unit_sphere(engine);
+				local_scatter_direction(0) = real_abs(local_scatter_direction(0));
+				// Convert the triangle-local direction into global coordinates.
+				Vec d1 = hit_triangle->edge01.normalized();
+				Vec d2 = hit_triangle->normal.cross(d1);
+				Vec scatter_direction = local_scatter_direction(0) * hit_triangle->normal + local_scatter_direction(1) * d1 + local_scatter_direction(2) * d2;
+//				Vec scatter_direction = reflection;
+				Ray scattered_ray(hit, scatter_direction);
+				// Recursively sample the scattered light.
+				energy += (1.0 / branches) * 0.8 * cast_ray(scattered_ray, recursions-1, 1);
+			}
 		}
 		// Color by lights.
 		for (auto& light : *scene->lights) {
@@ -133,7 +135,7 @@ void Integrator::perform_pass() {
 	// This is a really weird assumption to make!
 	normal_distribution<> dist(0, 1);
 	Real plane_of_focus_distance = 4.5;
-	Real dof_dispersion = 0.25 / 3.0;
+	Real dof_dispersion = 0.0; //0.25 / 3.0;
 
 	#pragma omp parallel for
 	for (int y = 0; y < canvas->height; y++) {
@@ -150,7 +152,7 @@ void Integrator::perform_pass() {
 			ray.direction -= (dof_x_offset / plane_of_focus_distance) * camera_right;
 			ray.direction -= (dof_y_offset / plane_of_focus_distance) * camera_up;
 			// Do the big expensive computation.
-			Color contribution = cast_ray(ray, 2);
+			Color contribution = cast_ray(ray, 4, 1);
 			// Accumulate the energy into our buffer.
 			*canvas->pixel_ptr(x, y) += contribution;
 		}

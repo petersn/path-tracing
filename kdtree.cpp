@@ -10,7 +10,7 @@ using namespace std;
 #include "kdtree.h"
 
 #define LEAF_THRESHOLD 8
-#define MAXIMUM_DEPTH 17 //8
+#define MAXIMUM_DEPTH 22 //8
 // If a child would have this many or fewer triangles then we just build its node ourselves, rather than paying the overhead of dispatching to a thread.
 #define THREADED_DISPATCH_THRESHOLD 16
 
@@ -60,9 +60,9 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 	for (int index : all_our_indices)
 		aabb.update((*all_triangles)[index].aabb);
 	// We should never get zero triangles to a node!
-	if (triangle_count == 0)
-		cout << "Zero at depth: " << depth << endl;
-	assert(triangle_count > 0);
+//	if (triangle_count == 0)
+//		cout << "Zero at depth: " << depth << endl;
+//	assert(triangle_count > 0);
 	// If the there are fewer than three triangles left then store the one or two.
 	if (triangle_count <= LEAF_THRESHOLD or depth >= MAXIMUM_DEPTH) {
 		form_as_leaf_from(&all_our_indices, all_triangles);
@@ -99,7 +99,17 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 				else
 					count_on_side[minmax] = triangle_count - high;
 			}
+			// Current heuristic: Minimize the size of the largest subtree.
 			Real score = real_max(count_on_side[0], count_on_side[1]);
+			// New heuristic: Surface Area Heuristic (SAH)
+//			Real low_sa = sample_sh - aabb.minima(potential_split_axis);
+//			Real high_sa = aabb.maxima(potential_split_axis) - sample_sh;
+//			assert(low_sa >= 0);
+//			assert(high_sa >= 0);
+//			Real score = low_sa * count_on_side[0] + high_sa * count_on_side[1];
+//			score /= (low_sa + high_sa);
+//			score += mini_score * 0.1;
+//			score = mini_score;
 			if (score < best_sh_score) {
 				best_sh_so_far = sample_sh;
 				best_sh_axis = potential_split_axis;
@@ -132,6 +142,8 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 				bool overlaps_above = tri.aabb.maxima(split_axis) > split_height;
 				assert(tri.aabb.minima(split_axis) <= tri.aabb.maxima(split_axis));
 				assert(overlaps_below or overlaps_above);
+//				if (overlaps_below and overlaps_above)
+//					continue;
 				if (overlaps_below)
 					low_side_sorted_by[minmax][axis]->push_back(triangle_index);
 				if (overlaps_above)
@@ -156,9 +168,10 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 	unsigned int high_size = high_side_sorted_by_min[0]->size();
 	// Make sure we didn't drop any triangles.
 	// This assert should be mutually redundant with the above assert of (overlaps_below or overlaps_above).
-	assert(low_size + high_size >= triangle_count);
+//	assert(low_size + high_size >= triangle_count);
 	// If we failed to improve, become a leaf.
 	if (high_size == triangle_count or low_size == triangle_count) {
+//	if (high_size == triangle_count and low_size == triangle_count) {
 		form_as_leaf_from(&all_our_indices, all_triangles);
 	} else {
 		// Otherwise, recursively subdivide.

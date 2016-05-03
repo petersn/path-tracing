@@ -79,6 +79,24 @@ bool AABB::does_ray_intersect(const CastingRay& ray) {
 	return true;
 }
 
+void AABB::surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high) {
+	// Compute the perimeter and area of the face normal to `axis`.
+	Real perimeter = 0.0;
+	Real area = 1.0;
+	for (int i = 0; i < 3; i++) {
+		if (i != axis)
+			continue;
+		Real length = maxima(axis) - minima(axis);
+		perimeter += 2 * length;
+		area *= length;
+	}
+	// Compute the surface area on the low side of the split.
+	Real low_thickness = height - minima(axis);
+	Real high_thickness = maxima(axis) - height;
+	sa_low = 2 * area + perimeter * low_thickness;
+	sa_high = 2 * area + perimeter * high_thickness;
+}
+
 Triangle::Triangle() {
 }
 

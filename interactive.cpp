@@ -76,12 +76,12 @@ void main_loop(void) {
 		}
 		integrator->perform_pass();
 		cout << "Pass: " << integrator->passes << " Time: " << integrator->last_pass_seconds << " Rays cast: " << rays_cast << " MT calls: " << triangle_tests << " MTs per pixel: " << triangle_tests / (float) (screen_width * screen_height) << endl;
-		char path[80];
-		sprintf(path, "progressive/frame%04i.png", integrator->passes);
-		gain = 255.0 / integrator->passes;
-		integrator->canvas->gain = gain;
-		integrator->canvas->save(path);
-		cout << "Saved to " << path << endl;
+//		char path[80];
+//		sprintf(path, "progressive/frame%04i.png", integrator->passes);
+//		gain = 255.0 / integrator->passes;
+//		integrator->canvas->gain = gain;
+//		integrator->canvas->save(path);
+//		cout << "Saved to " << path << endl;
 
 		// Once we're done handling all the key presses, draw some random shit.
 		if (left_held)
@@ -126,7 +126,6 @@ void main_loop(void) {
 int main(int argc, char** argv) {
 	// Load up an STL file.
 	scene = new Scene(argv[1]);
-	return 0;
 	// Make a light.
 	scene->lights->push_back(Light({Vec(0, 0, 3), 9.0 * Vec(0.8, 0.5, 0.25)}));
 	scene->lights->push_back(Light({Vec(-2, 2, 4), 9.0 * Vec(0.25, 0.8, 0.25)}));

@@ -126,6 +126,7 @@ void main_loop(void) {
 int main(int argc, char** argv) {
 	// Load up an STL file.
 	scene = new Scene(argv[1]);
+	return 0;
 	// Make a light.
 	scene->lights->push_back(Light({Vec(0, 0, 3), 9.0 * Vec(0.8, 0.5, 0.25)}));
 	scene->lights->push_back(Light({Vec(-2, 2, 4), 9.0 * Vec(0.25, 0.8, 0.25)}));

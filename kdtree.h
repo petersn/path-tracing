@@ -3,11 +3,18 @@
 #ifndef _KDTREE_H
 #define _KDTREE_H
 
+#ifdef THREADED_KD_BUILD
+#include <pthread.h>
+#include <semaphore.h>
+#endif
+
 #include <vector>
-#include <map>
+#include <list>
 #include "utils.h"
 
 extern long long rays_cast;
+
+class kdTree;
 
 class kdTreeNode {
 public:
@@ -30,17 +37,47 @@ public:
 	void form_as_leaf_from(vector<int>* indices, vector<Triangle>* all_triangles);
 
 public:
-	kdTreeNode(int depth, vector<int>* sorted_indices_by_min[3], vector<int>* sorted_indices_by_max[3], vector<Triangle>* all_triangles);
+	kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by_min[3], vector<int>* sorted_indices_by_max[3], vector<Triangle>* all_triangles);
 	~kdTreeNode();
 	void get_stats(int& deepest_depth, int& biggest_set);
 	bool ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle=nullptr);
 };
 
+#ifdef THREADED_KD_BUILD
+struct JobDescriptor {
+	bool do_quit;
+	kdTreeNode** destination;
+	int depth;
+	vector<int>* sorted_indices_by_min[3];
+	vector<int>* sorted_indices_by_max[3];
+};
+
+struct BuildingThread {
+	pthread_t thread;
+	kdTree* tree;
+
+	void spawn_thread(kdTree* _tree);
+	static void* computation_thread_main(void* cookie);
+};
+#endif
+
 class kdTree {
+#ifdef THREADED_KD_BUILD
+	friend class BuildingThread;
+#endif
 	std::vector<Triangle>* all_triangles;
 
 public:
 	kdTreeNode* root;
+
+#ifdef THREADED_KD_BUILD
+	// The following data is used for synchronizing with the building threads.
+	sem_t job_available;
+	sem_t job_writable;
+	sem_t jobs_all_done;
+	list<JobDescriptor> job_list;
+	int total_job_count;
+#endif
 
 	kdTree(std::vector<Triangle>* all_triangles);
 	~kdTree();

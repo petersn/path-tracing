@@ -166,10 +166,7 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 		if (low_size > THREADED_DISPATCH_THRESHOLD) {
 			JobDescriptor job;
 			// Acquire the job variable for our thread.
-//			cout << "Waiting on writable." << endl;
 			pthread_mutex_lock(&parent->job_lock);
-//			sem_wait(&parent->job_writable);
-//			cout << "Got writable." << endl;
 			job.do_quit = false;
 			job.destination = &low_side;
 			job.depth = depth+1;
@@ -180,10 +177,8 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 			parent->job_list.push_back(job);
 			parent->total_job_count++;
 			pthread_mutex_unlock(&parent->job_lock);
-//			sem_post(&parent->job_writable);
 			// Release the job, so a processing thread can begin processing it.
 			sem_post(&parent->job_available);
-//			cout << "D1" << endl;
 		} else
 #endif
 			low_side = new kdTreeNode(parent, depth+1, low_side_sorted_by_min, low_side_sorted_by_max, all_triangles);
@@ -191,10 +186,7 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 		if (high_size > THREADED_DISPATCH_THRESHOLD) {
 			JobDescriptor job;
 			// Acquire the job variable for our thread.
-//			cout << "Waiting on writable." << endl;
 			pthread_mutex_lock(&parent->job_lock);
-//			sem_wait(&parent->job_writable);
-//			cout << "Got writable." << endl;
 			job.do_quit = false;
 			job.destination = &high_side;
 			job.depth = depth+1;
@@ -205,12 +197,8 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 			parent->job_list.push_back(job);
 			parent->total_job_count++;
 			pthread_mutex_unlock(&parent->job_lock);
-//			sem_post(&parent->job_writable);
 			// Release the job, so a processing thread can begin processing it.
 			sem_post(&parent->job_available);
-//			int value;
-//			sem_getvalue(&parent->job_available, &value);
-//			cout << "D2: " << value << endl;
 		} else
 #endif
 			high_side = new kdTreeNode(parent, depth+1, high_side_sorted_by_min, high_side_sorted_by_max, all_triangles);
@@ -340,25 +328,18 @@ void* BuildingThread::computation_thread_main(void* cookie) {
 	// Begin waiting on a task.
 	while (true) {
 		sem_wait(&self->tree->job_available);
-//		cout << "Limbo for: " << cookie << endl;
 		pthread_mutex_lock(&self->tree->job_lock);
-//		sem_wait(&self->tree->job_writable);
 		// Copy over the job descriptor.
 		current_job = self->tree->job_list.front();
 		self->tree->job_list.pop_front();
 		// Release the job_writable semaphore, allowing other threads to be issued jobs.
 		pthread_mutex_unlock(&self->tree->job_lock);
-//		sem_post(&self->tree->job_writable);
 		// Iff the job tells to quit then we're being signaled that work is done, and we do so.
-		if (current_job.do_quit) {
-//			cout << "Thread exiting!" << endl;
+		if (current_job.do_quit)
 			break;
-		}
-//		cout << "Got threaded job: " << cookie << endl;
 		// Begin processing.
 		auto new_node = new kdTreeNode(self->tree, current_job.depth, current_job.sorted_indices_by_min, current_job.sorted_indices_by_max, self->tree->all_triangles);
 		*current_job.destination = new_node;
-//		cout << "Completed threaded build job." << endl;
 		// Free the lists.
 		// Finally, free our scratch lists.
 		for (int axis = 0; axis < 3; axis++) {
@@ -368,7 +349,6 @@ void* BuildingThread::computation_thread_main(void* cookie) {
 		// Decrement the total job count.
 		pthread_mutex_lock(&self->tree->job_lock);
 		self->tree->total_job_count--;
-//		cout << "Decremented to: " << self->tree->total_job_count << endl;
 		if (self->tree->total_job_count == 0)
 			sem_post(&self->tree->jobs_all_done);
 		pthread_mutex_unlock(&self->tree->job_lock);
@@ -426,7 +406,6 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 
 #ifdef THREADED_KD_BUILD
 	// Acquire the job variable for our thread.
-//	sem_wait(&job_writable);
 	pthread_mutex_lock(&job_lock);
 	JobDescriptor job;
 	job.do_quit = false;
@@ -439,7 +418,6 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 	job_list.push_back(job);
 	total_job_count++;
 	// Release the job, so a processing thread can begin processing it.
-//	sem_post(&job_writable);
 	pthread_mutex_unlock(&job_lock);
 	sem_post(&job_available);
 #else
@@ -453,9 +431,6 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 	// Thus, we set this flag, and then post to the semaphore once per thread.
 	// We must first grab job_writable to avoid overwriting a job being read.
 	sem_wait(&jobs_all_done);
-//	cout << "DONE!" << endl;
-	//sleep(100);
-//	cout << "Pushing kill jobs." << endl;
 	job.do_quit = true;
 	// NB: These loops can't be merged without creating a deadlock.
 	for (int i = 0; i < thread_count; i++) {

@@ -2,7 +2,7 @@
 # Optionally one can include: -fstack-protector-all
 CPPFLAGS=`sdl-config --cflags` -I/usr/include/eigen3 -std=c++11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -O3 -ffast-math -g -fopenmp -pthread
 #CPPFLAGS+=-DDOUBLE_PRECISION
-#CPPFLAGS+=-DTHREADED_KD_BUILD
+CPPFLAGS+=-DTHREADED_KD_BUILD
 
 all: example interactive
 

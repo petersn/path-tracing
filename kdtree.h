@@ -73,8 +73,8 @@ public:
 #ifdef THREADED_KD_BUILD
 	// The following data is used for synchronizing with the building threads.
 	sem_t job_available;
-	sem_t job_writable;
 	sem_t jobs_all_done;
+	pthread_mutex_t job_lock;
 	list<JobDescriptor> job_list;
 	int total_job_count;
 #endif

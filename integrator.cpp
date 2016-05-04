@@ -100,6 +100,27 @@ PassDescriptor::PassDescriptor() : start_x(0), start_y(0), width(-1), height(-1)
 PassDescriptor::PassDescriptor(int start_x, int start_y, int width, int height) : start_x(start_x), start_y(start_y), width(width), height(height) {
 }
 
+void PassDescriptor::clamp_bounds(int max_width, int max_height) {
+	// Do some basic sanity checks.
+	if (start_x < 0)
+		start_x = 0;
+	if (start_y < 0)
+		start_y = 0;
+	if (start_x > max_width - 1)
+		start_x = max_width - 1;
+	if (start_y > max_height - 1)
+		start_y = max_height - 1;
+	// Now compute a stopping value.
+	if (width == -1)
+		width = max_width;
+	if (height == -1)
+		height = max_height;
+	if (width > max_width - start_x)
+		width = max_width - start_x;
+	if (height > max_height - start_y)
+		height = max_height - start_y;
+}
+
 Integrator::Integrator(int width, int height, Scene* scene) : scene(scene), engine(rd()) {
 	passes = 0;
 	// Allocate a canvas.
@@ -148,18 +169,13 @@ void Integrator::perform_pass(PassDescriptor desc) {
 
 	// Compute the bounds to iterate over.
 	// Here we use the convention that a width/height of -1 means "go all the way to the edge of the canvas".
-	int stop_x = desc.width == -1 ? canvas->width : desc.start_x + desc.width;
-	int stop_y = desc.height == -1 ? canvas->height : desc.start_y + desc.height;
-	if (stop_x > canvas->width)
-		stop_x = canvas->width;
-	if (stop_y > canvas->height)
-		stop_y = canvas->height;
+	desc.clamp_bounds(canvas->width, canvas->height);
 
 //	cout << "Got bounds: " << desc.start_x << "-" << stop_x << " " << desc.start_y << "-" << stop_y << endl;
 
 	#pragma omp parallel for
-	for (int y = desc.start_y; y < stop_y; y++) {
-		for (int x = desc.start_x; x < stop_x; x++) {
+	for (int y = desc.start_y; y < desc.start_y + desc.height; y++) {
+		for (int x = desc.start_x; x < desc.start_x + desc.width; x++) {
 //	for (int y = 0; y < canvas->height; y++) {
 //		for (int x = 0; x < canvas->width; x++) {
 			Real dx = scene->camera_image_plane_width * (x - canvas->width / 2) / (Real) canvas->width;
@@ -235,11 +251,17 @@ void* RenderThread::render_thread_main(void* cookie) {
 		if (current_message.do_die)
 			break;
 
+		// Mark what tile we're currently processing so that the ProgressDisplay can render little red lines around it.
+		self->is_running = true;
+		self->currently_processing = current_message.desc;
+
 		// Otherwise we execute a single pass.
 		// NB: Later if we want workers to do other sorts of things add extra message types here.
 		pthread_mutex_lock(&self->integrator_lock);
 		self->integrator->perform_pass(current_message.desc);
 		pthread_mutex_unlock(&self->integrator_lock);
+
+		self->is_running = false;
 
 		// Inform our parent that a pass has been completed.
 		sem_post(&self->parent->passes_semaphore);

@@ -38,6 +38,7 @@ struct PassDescriptor {
 
 	PassDescriptor();
 	PassDescriptor(int start_x, int start_y, int width, int height);
+	void clamp_bounds(int max_width, int max_height);
 };
 
 struct Integrator {
@@ -64,6 +65,10 @@ struct RenderMessage {
 struct RenderThread {
 	pthread_t thread;
 	RenderEngine* parent;
+
+	// These values are purely for the ProgressDisplay to read in a thread-unsafe manner for rendering the GUI.
+	volatile bool is_running;
+	volatile PassDescriptor currently_processing;
 
 	sem_t messages_semaphore;
 	pthread_mutex_t messages_lock;

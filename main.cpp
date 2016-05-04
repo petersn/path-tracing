@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 
 	start_performance_counter();
 
-	auto engine = new RenderEngine(1000, 600, scene);
+	auto engine = new RenderEngine(1366, 768, scene);
 	engine->tile_width = 64;
 	engine->tile_height = 64;
 

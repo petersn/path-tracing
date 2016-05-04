@@ -1,5 +1,6 @@
 // Various utilities.
 
+#include <sys/time.h>
 #include "utils.h"
 
 #define EPSILON 1e-8
@@ -167,4 +168,17 @@ int get_optimal_thread_count() {
 	return 4;
 }
 
+struct timeval perf_counter_start;
+
+void start_performance_counter() {
+	gettimeofday(&perf_counter_start, NULL);
+}
+
+void print_performance_counter() {
+	struct timeval stop, result;
+	gettimeofday(&stop, NULL);
+	timersub(&stop, &perf_counter_start, &result);
+	double seconds = result.tv_sec + result.tv_usec * 1e-6;
+	cout << seconds;
+}
 

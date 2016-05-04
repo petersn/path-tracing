@@ -24,6 +24,8 @@ struct Scene {
 	Ray main_camera;
 	Vec scene_up;
 	Real camera_image_plane_width;
+	Real plane_of_focus_distance;
+	Real dof_dispersion;
 
 	Scene(std::string path);
 	~Scene();

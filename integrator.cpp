@@ -10,8 +10,11 @@ using namespace std;
 Scene::Scene(string path) : main_camera(Vec(-1, 0, 0), Vec(1, 0, 0)) {
 	// The convention is that main_camera.cross(scene_up) is camera right.
 	scene_up = Vec(0, 0, 1);
-	// Field of view is 
+	// Field of view is 90 degrees by default.
 	camera_image_plane_width = 1.0;
+	// Set default depth of field parameters.
+	plane_of_focus_distance = 1.0;
+	dof_dispersion = 0.0;
 
 	// Read in the input.
 	mesh = read_stl(path);
@@ -134,8 +137,8 @@ void Integrator::perform_pass() {
 	// NB: By using a normal here I effectively have an aperature with a Gaussian response across its surface.
 	// This is a really weird assumption to make!
 	normal_distribution<> dist(0, 1);
-	Real plane_of_focus_distance = 4.5;
-	Real dof_dispersion = 0.0; //0.25 / 3.0;
+	Real plane_of_focus_distance = scene->plane_of_focus_distance;
+	Real dof_dispersion = scene->dof_dispersion;
 
 	#pragma omp parallel for
 	for (int y = 0; y < canvas->height; y++) {
@@ -175,6 +178,9 @@ RenderThread::RenderThread(RenderEngine* parent) : parent(parent) {
 	pthread_mutex_init(&integrator_lock, NULL);
 	// Make an integrator with its own canvas.
 	integrator = new Integrator(parent->width, parent->height, parent->scene);
+	// Launch our thread!
+	pthread_create(&thread, nullptr, RenderThread::render_thread_main, (void*)this);
+
 }
 
 RenderThread::~RenderThread() {
@@ -224,6 +230,8 @@ void* RenderThread::render_thread_main(void* cookie) {
 }
 
 RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), height(height), scene(scene), total_passes(0), semaphore_passes_pending(0) {
+	// Initialize our semaphore before launching our threads. (It would also be okay to do it after, though.)
+	sem_init(&passes_semaphore, 0, 0);
 	// Spawn our child threads.
 	for (int i = 0; i < get_optimal_thread_count(); i++)
 		workers.push_back(new RenderThread(this));
@@ -235,6 +243,12 @@ RenderEngine::~RenderEngine() {
 	// Send a do_die message to each worker.
 	for (auto worker : workers)
 		worker->send_message(RenderMessage({true}));
+	// We now have a strange conflict. We need to be sure that the worker threads won't post to passes_semaphore anymore so we can destroy it.
+	// However, we can't know that the worker threads have died unless we sync with them.
+	// Thus, the next thing we do is sync -- which blocks until all work is done, including all the work we're going to throw away.
+	// TODO: Find a workaround for this so that users can intentionally throw away work and kill threads prematurely if they delete a RenderEngine before syncing.
+	sync();
+	sem_destroy(&passes_semaphore);
 	// NB: There is no need to delete the RenderThreads here, because they delete themselves when they get the do_die message.
 	delete master_canvas;
 }
@@ -251,8 +265,10 @@ void RenderEngine::perform_passes(int pass_count) {
 
 void RenderEngine::sync() {
 	// Wait on our semaphore a number of times equal to the number of dispatched jobs.
-	while (semaphore_passes_pending--)
+	while (semaphore_passes_pending) {
+		semaphore_passes_pending--;
 		sem_wait(&passes_semaphore);
+	}
 }
 
 int RenderEngine::rebuild_master_canvas() {

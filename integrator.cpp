@@ -43,7 +43,7 @@ Scene::~Scene() {
 }
 
 static inline Real square(Real x) {
-	return x*x;
+	return x * x;
 }
 
 Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {

@@ -3,6 +3,7 @@
 using namespace std;
 #include <sys/time.h>
 #include <iostream>
+#include <algorithm>
 #include <ctime>
 #include "integrator.h"
 #include "stlreader.h"
@@ -253,7 +254,10 @@ void* RenderThread::render_thread_main(void* cookie) {
 
 		// Mark what tile we're currently processing so that the ProgressDisplay can render little red lines around it.
 		self->is_running = true;
-		self->currently_processing = current_message.desc;
+		self->currently_processing.start_x = current_message.desc.start_x;
+		self->currently_processing.start_y = current_message.desc.start_y;
+		self->currently_processing.width   = current_message.desc.width;
+		self->currently_processing.height  = current_message.desc.height;
 
 		// Otherwise we execute a single pass.
 		// NB: Later if we want workers to do other sorts of things add extra message types here.
@@ -320,9 +324,34 @@ void RenderEngine::perform_full_pass() {
 	}
 }
 
+Real global_tile_center_x, global_tile_center_y;
+bool tile_compare(const pair<int, int>& a, const pair<int, int>& b) {
+	Real a_distance = square(a.first - global_tile_center_x) + square(a.second - global_tile_center_y);
+	Real b_distance = square(b.first - global_tile_center_x) + square(b.second - global_tile_center_y);
+	return a_distance < b_distance;
+}
+
 void RenderEngine::perform_full_passes(int pass_count) {
-	while (pass_count--)
-		perform_full_pass();
+//	while (pass_count--)
+//		perform_full_pass();
+	// Cover the scene in tiles.
+	vector<pair<int, int>> tile_spots;
+	int next_y = 0;
+	while (next_y < height) {
+		int next_x = 0;
+		while (next_x < width) {
+			for (int j = 0; j < pass_count; j++)
+				tile_spots.push_back(pair<int, int>(next_x, next_y));
+			next_x += tile_width;
+		}
+		next_y += tile_height;
+	}
+	global_tile_center_x = (width - tile_width) / 2.0;
+	global_tile_center_y = (height - tile_height) / 2.0;
+	stable_sort(tile_spots.begin(), tile_spots.end(), tile_compare);
+	// Push all the pairs.
+	for (auto spot : tile_spots)
+		issue_pass_desc(PassDescriptor(spot.first, spot.second, tile_width, tile_height));
 }
 
 void RenderEngine::sync() {

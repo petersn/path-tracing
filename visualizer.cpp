@@ -3,6 +3,7 @@
 
 using namespace std;
 #include <iostream>
+#include <unistd.h>
 #include "visualizer.h"
 
 // This is the number of pixels to mark red in the corner of each rendering tile.
@@ -52,6 +53,7 @@ void ProgressDisplay::main_loop() {
 
 //		cout << "Rebuild." << endl;
 		// Aggregate an up-to-date master canvas from the various rendering threads.
+		usleep(100000);
 		engine->rebuild_master_canvas();
 
 		// We must make these calls, to avoid violating SDL's rules.
@@ -109,5 +111,6 @@ void ProgressDisplay::main_loop() {
 		SDL_Flip(screen);
 	}
 	SDL_Quit();
+	exit(1);
 }
 

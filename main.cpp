@@ -4,6 +4,7 @@ using namespace std;
 #include <math.h>
 #include <iostream>
 #include "integrator.h"
+#include "visualizer.h"
 
 int main(int argc, char** argv) {
 	// Load up an STL file.
@@ -22,22 +23,22 @@ int main(int argc, char** argv) {
 	scene->dof_dispersion = 0.1;
 
 	start_performance_counter();
-#if 0
-	// Allocate an integrator, and integrate a single pass of the scene.
-	auto integrator = new Integrator(1366, 768, scene);
-	for (int i = 0; i < 4; i++)
-		integrator->perform_pass();
-	cout << "Seconds per pass: " << integrator->last_pass_seconds << endl;
-	integrator->canvas->save("output.png");
-	delete integrator;
-#else
-	auto engine = new RenderEngine(1366, 768, scene);
-	engine->perform_passes(4);
-	engine->sync();
-	engine->rebuild_master_canvas();
+
+	auto engine = new RenderEngine(1000, 600, scene);
+	engine->tile_width = 64;
+	engine->tile_height = 64;
+
+	auto display = new ProgressDisplay(engine);
+	display->init();
+
+	engine->perform_full_passes(100);
+//	engine->sync();
+//	engine->rebuild_master_canvas();
+	display->main_loop();
+
 	engine->master_canvas->save("output.png");
 	delete engine;
-#endif
+
 	cout << "Total time to render: ";
 	print_performance_counter();
 	cout << endl;

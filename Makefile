@@ -1,7 +1,9 @@
 
+OBJECTS=kdtree.o utils.o stlreader.o canvas.o integrator.o visualizer.o
+
 # Optionally one can include: -fstack-protector-all
 CPPFLAGS=`sdl-config --cflags` -I/usr/include/eigen3 -std=c++11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -O3 -ffast-math -g -pthread
-LINKFLAGS=-lpng -lpthread
+LINKFLAGS=-lpng -lpthread `sdl-config --libs`
 
 # Option: Use doubles rather than floats for the Real type.
 #CPPFLAGS+=-DDOUBLE_PRECISION
@@ -13,19 +15,19 @@ CPPFLAGS+=-DTHREADED_KD_BUILD
 CPPFLAGS+=-DTHREADED_SAMPLING
 
 # Option: Use OpenMP to parallelize sampling.
-CPPFLAGS+=-fopenmp
-LINKFLAGS+=-fopenmp
+#CPPFLAGS+=-fopenmp
+#LINKFLAGS+=-fopenmp
 
 all: example interactive
 
-example: kdtree.o utils.o stlreader.o canvas.o integrator.o main.o
+example: $(OBJECTS) main.o
 	g++ -o $@ $^ $(LINKFLAGS)
 
-interactive: kdtree.o utils.o stlreader.o canvas.o integrator.o interactive.o
-	g++ -o $@ $^ $(LINKFLAGS) `sdl-config --libs`
+interactive: $(OBJECTS) interactive.o
+	g++ -o $@ $^ $(LINKFLAGS)
 
-animate: kdtree.o utils.o stlreader.o canvas.o integrator.o animate.o
-	g++ -o $@ $^ $(LINKFLAGS) `sdl-config --libs`
+animate: $(OBJECTS) animate.o
+	g++ -o $@ $^ $(LINKFLAGS)
 
 .PHONY: clean
 clean:

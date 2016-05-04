@@ -94,6 +94,12 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 	return energy;
 }
 
+PassDescriptor::PassDescriptor() : start_x(0), start_y(0), width(-1), height(-1) {
+}
+
+PassDescriptor::PassDescriptor(int start_x, int start_y, int width, int height) : start_x(start_x), start_y(start_y), width(width), height(height) {
+}
+
 Integrator::Integrator(int width, int height, Scene* scene) : scene(scene), engine(rd()) {
 	passes = 0;
 	// Allocate a canvas.
@@ -119,7 +125,7 @@ Ray Integrator::get_ray_for_pixel(int x, int y) {
 	return Ray(scene->main_camera.origin, scene->main_camera.direction + offset);
 }
 
-void Integrator::perform_pass() {
+void Integrator::perform_pass(PassDescriptor desc) {
 	// Iterate over the image.
 	// XXX: Use tiles instead for cache coherency.
 	Vec camera_right = scene->main_camera.direction.cross(scene->scene_up);
@@ -140,9 +146,22 @@ void Integrator::perform_pass() {
 	Real plane_of_focus_distance = scene->plane_of_focus_distance;
 	Real dof_dispersion = scene->dof_dispersion;
 
+	// Compute the bounds to iterate over.
+	// Here we use the convention that a width/height of -1 means "go all the way to the edge of the canvas".
+	int stop_x = desc.width == -1 ? canvas->width : desc.start_x + desc.width;
+	int stop_y = desc.height == -1 ? canvas->height : desc.start_y + desc.height;
+	if (stop_x > canvas->width)
+		stop_x = canvas->width;
+	if (stop_y > canvas->height)
+		stop_y = canvas->height;
+
+//	cout << "Got bounds: " << desc.start_x << "-" << stop_x << " " << desc.start_y << "-" << stop_y << endl;
+
 	#pragma omp parallel for
-	for (int y = 0; y < canvas->height; y++) {
-		for (int x = 0; x < canvas->width; x++) {
+	for (int y = desc.start_y; y < stop_y; y++) {
+		for (int x = desc.start_x; x < stop_x; x++) {
+//	for (int y = 0; y < canvas->height; y++) {
+//		for (int x = 0; x < canvas->width; x++) {
 			Real dx = scene->camera_image_plane_width * (x - canvas->width / 2) / (Real) canvas->width;
 			Real dy = -scene->camera_image_plane_width * (y - canvas->height / 2) * aspect_ratio / (Real) canvas->height;
 			// Compute an offset into the image plane that the camera should face.
@@ -219,7 +238,7 @@ void* RenderThread::render_thread_main(void* cookie) {
 		// Otherwise we execute a single pass.
 		// NB: Later if we want workers to do other sorts of things add extra message types here.
 		pthread_mutex_lock(&self->integrator_lock);
-		self->integrator->perform_pass();
+		self->integrator->perform_pass(current_message.desc);
 		pthread_mutex_unlock(&self->integrator_lock);
 
 		// Inform our parent that a pass has been completed.
@@ -239,12 +258,15 @@ RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), 
 		workers.push_back(new RenderThread(this));
 	// Allocate a master canvas.
 	master_canvas = new Canvas(width, height);
+	// Set the default tile width and height to be the full canvas width and height.
+	tile_width = width;
+	tile_height = height;
 }
 
 RenderEngine::~RenderEngine() {
 	// Send a do_die message to each worker.
 	for (auto worker : workers)
-		worker->send_message(RenderMessage({true}));
+		worker->send_message(RenderMessage({true, PassDescriptor()}));
 	// We now have a strange conflict. We need to be sure that the worker threads won't post to passes_semaphore anymore so we can destroy it.
 	// However, we can't know that the worker threads have died unless we sync with them.
 	// Thus, the next thing we do is sync -- which blocks until all work is done, including all the work we're going to throw away.
@@ -255,14 +277,30 @@ RenderEngine::~RenderEngine() {
 	delete master_canvas;
 }
 
-void RenderEngine::perform_passes(int pass_count) {
-	while (pass_count--) {
-		// Get a worker to dispatch to.
-		int worker = (total_passes++) % workers.size();
-		workers[worker]->send_message(RenderMessage({false}));
-		// Keep track of the total number of waits on passes_semaphore we need to be synced with all dispatched work.
-		semaphore_passes_pending++;
+void RenderEngine::issue_pass_desc(PassDescriptor desc) {
+	// Get a worker to dispatch to.
+	int worker = (total_passes++) % workers.size();
+	workers[worker]->send_message(RenderMessage({false, desc}));
+	// Keep track of the total number of waits on passes_semaphore we need to be synced with all dispatched work.
+	semaphore_passes_pending++;
+}
+
+void RenderEngine::perform_full_pass() {
+	// Cover the scene in tiles.
+	int next_y = 0;
+	while (next_y < height) {
+		int next_x = 0;
+		while (next_x < width) {
+			issue_pass_desc(PassDescriptor(next_x, next_y, tile_width, tile_height));
+			next_x += tile_width;
+		}
+		next_y += tile_height;
 	}
+}
+
+void RenderEngine::perform_full_passes(int pass_count) {
+	while (pass_count--)
+		perform_full_pass();
 }
 
 void RenderEngine::sync() {
@@ -282,15 +320,14 @@ int RenderEngine::rebuild_master_canvas() {
 		// This guarantees that we don't grab it in between two passes.
 		// This might cause us to block for seconds while we wait for a pass to complete!
 		// TODO: Implement double buffering so this isn't the case.
-		pthread_mutex_lock(&worker->integrator_lock);
+		// XXX: For temporary debugging I've disabled these checks.
+//		pthread_mutex_lock(&worker->integrator_lock);
 		// Accumulate the energy from this worker.
 		master_canvas->add_from(worker->integrator->canvas);
 		// Count the passes it contributed.
 		total_passes += worker->integrator->passes;
-		pthread_mutex_unlock(&worker->integrator_lock);
+//		pthread_mutex_unlock(&worker->integrator_lock);
 	}
-	// Set the gain appropriately on the master canvas so it exports correctly.
-//	master_canvas->gain = 255.0 / total_passes;
 	return total_passes;
 }
 

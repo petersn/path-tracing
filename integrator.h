@@ -31,6 +31,15 @@ struct Scene {
 	~Scene();
 };
 
+struct PassDescriptor {
+	int start_x, start_y;
+	// If these values are set to -1 then it indicates full width/height.
+	int width, height;
+
+	PassDescriptor();
+	PassDescriptor(int start_x, int start_y, int width, int height);
+};
+
 struct Integrator {
 	Scene* scene;
 	Canvas* canvas;
@@ -44,11 +53,12 @@ struct Integrator {
 
 	Integrator(int width, int height, Scene* scene);
 	~Integrator();
-	void perform_pass();
+	void perform_pass(PassDescriptor desc = PassDescriptor());
 };
 
 struct RenderMessage {
 	bool do_die;
+	PassDescriptor desc;
 };
 
 struct RenderThread {
@@ -73,6 +83,7 @@ struct RenderEngine {
 	Scene* scene;
 	Canvas* master_canvas;
 	int total_passes;
+	int tile_width, tile_height;
 
 	std::vector<RenderThread*> workers;
 	// This semaphore gets posted to once for each completed pass by a worker thread.
@@ -83,7 +94,9 @@ struct RenderEngine {
 
 	RenderEngine(int width, int height, Scene* scene);
 	~RenderEngine();
-	void perform_passes(int pass_count);
+	void issue_pass_desc(PassDescriptor desc);
+	void perform_full_pass();
+	void perform_full_passes(int pass_count);
 	// This routine makes sure all the workers are done rendering.
 	void sync();
 	// This routine accumulates the energy from various workers, sums it into master_canvas, and returns the number of passes averaged over.
@@ -91,4 +104,3 @@ struct RenderEngine {
 };
 
 #endif
-

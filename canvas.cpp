@@ -38,7 +38,7 @@ Real* Canvas::depth_ptr(int x, int y) {
 
 void Canvas::get_pixel(int x, int y, uint8_t* dest) {
 	// The pixel color is the total energy divided by the number of passes for this pixel.
-	Color c = pixels[x + y * width] / (Real) per_pixel_passes[x + y * width];
+	Color c = pixels[x + y * width] / real_max(per_pixel_passes[x + y * width], 1.0);
 	// TODO: Scene referred to display referred conversion and colorspace conversion here.
 	for (int i = 0; i < 3; i++)
 		dest[i] = (uint8_t)real_max(0.0, real_min(255.0, (Real)(c(i) * gain)));

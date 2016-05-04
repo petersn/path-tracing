@@ -13,8 +13,8 @@ CPPFLAGS+=-DTHREADED_KD_BUILD
 CPPFLAGS+=-DTHREADED_SAMPLING
 
 # Option: Use OpenMP to parallelize sampling.
-#CPPFLAGS+=-fopenmp
-#LINKFLAGS+=-fopenmp
+CPPFLAGS+=-fopenmp
+LINKFLAGS+=-fopenmp
 
 all: example interactive
 

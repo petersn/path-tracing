@@ -3,6 +3,7 @@
 #ifndef _RENDER_UTILS_H
 #define _RENDER_UTILS_H
 
+#include <string>
 #include <random>
 #include <Eigen/Dense>
 
@@ -87,6 +88,7 @@ Vec sample_unit_sphere(std::mt19937& engine);
 int get_optimal_thread_count();
 void start_performance_counter();
 void print_performance_counter();
+std::string format_seconds_as_hms(double seconds, int width);
 
 #endif
 

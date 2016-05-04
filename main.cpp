@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
 	engine->tile_width = 32;
 	engine->tile_height = 32;
 
-	auto display = new ProgressDisplay(engine);
-	display->init();
+	auto display = new ProgressBar(engine);
+//	display->init();
 
 	engine->perform_full_passes(10);
 //	engine->sync();

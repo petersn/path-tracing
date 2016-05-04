@@ -3,6 +3,7 @@
 #ifndef _RENDER_VISUALIZER_H
 #define _RENDER_VISUALIZER_H
 
+#include <sys/time.h>
 #include <SDL.h>
 #include "integrator.h"
 
@@ -16,6 +17,15 @@ public:
 	// Opens a display and returns true on success.
 	bool init();
 	// Launches into a loop waiting for the render to complete.
+	void main_loop();
+};
+
+class ProgressBar {
+	RenderEngine* engine;
+	struct timeval start;
+
+public:
+	ProgressBar(RenderEngine* engine);
 	void main_loop();
 };
 

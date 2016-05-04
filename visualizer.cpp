@@ -3,7 +3,9 @@
 
 using namespace std;
 #include <iostream>
+#include <string>
 #include <unistd.h>
+#include <stdio.h>
 #include "visualizer.h"
 
 // This is the number of pixels to mark red in the corner of each rendering tile.
@@ -112,5 +114,32 @@ void ProgressDisplay::main_loop() {
 	}
 	SDL_Quit();
 	exit(1);
+}
+
+ProgressBar::ProgressBar(RenderEngine* engine) : engine(engine) {
+	gettimeofday(&start, NULL);
+}
+
+void ProgressBar::main_loop() {
+	int completed, issued;
+	do {
+		struct timeval stop, result;
+		gettimeofday(&stop, NULL);
+		timersub(&stop, &start, &result);
+		double elapsed = result.tv_sec + result.tv_usec * 1e-6;
+		// WARNING: We read total_passes_completed in a non-thread safe manner. Oh well.
+		completed = engine->total_passes_completed;
+		issued = engine->total_passes_issued;
+		double completion = completed / (double) issued;
+		double total_time = elapsed / real_max(1e-4, completion);
+		double remaining = total_time - elapsed;
+		string str_elapsed = format_seconds_as_hms(elapsed, 7);
+		string str_remaining = format_seconds_as_hms(remaining, 7);
+		string str_total_time = format_seconds_as_hms(total_time, 7);
+		printf("\r[%6.2f%%] Elapsed: %s Remaining: %s Total: %s Tile samples: %4i/%4i", 100.0 * completion, str_elapsed.c_str(), str_remaining.c_str(), str_total_time.c_str(), completed, issued);
+		fflush(stdout);
+		usleep(321456);
+	} while (completed < issued);
+	printf(" Done!\n");
 }
 

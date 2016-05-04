@@ -1,5 +1,6 @@
 // Various utilities.
 
+#include <math.h>
 #include <sys/time.h>
 #include "utils.h"
 
@@ -180,5 +181,40 @@ void print_performance_counter() {
 	timersub(&stop, &perf_counter_start, &result);
 	double seconds = result.tv_sec + result.tv_usec * 1e-6;
 	cout << seconds;
+}
+
+string format_seconds_as_hms(double seconds, int width) {
+	string s;
+	// Flip negatives to positives, then add in the minus sign at the end.
+	bool is_negative = seconds < 0;
+	if (is_negative)
+		seconds *= -1;
+	// For now we don't render fractional seconds.
+	int total_seconds = (int) ceil(seconds);
+	int second_count = total_seconds;
+	int minute_count = second_count / 60;
+	int hour_count = minute_count / 60;
+	second_count %= 60;
+	minute_count %= 60;
+	// First we add in seconds.
+	s += to_string(second_count);
+	// Pad if we had just one digit of seconds.
+	if (s.size() == 1)
+		s = "0" + s;
+	s = to_string(minute_count) + ":" + s;
+	// Check if hours are needed.
+	if (total_seconds >= 3600) {
+		// Again, pad if we have one digit of minutes.
+		if (s.size() == 4)
+			s = "0" + s;
+		s = to_string(hour_count) + ":" + s;
+	}
+	// Add in the minus sign if required.
+	if (is_negative)
+		s = "-" + s;
+	// Pad with spaces out to the desired width.
+	while (s.size() < width)
+		s = " " + s;
+	return s;
 }
 

@@ -88,6 +88,7 @@ struct RenderEngine {
 	Scene* scene;
 	Canvas* master_canvas;
 	int total_passes;
+	int total_passes_issued;
 	int tile_width, tile_height;
 
 	std::vector<RenderThread*> workers;
@@ -96,6 +97,10 @@ struct RenderEngine {
 	sem_t passes_semaphore;
 	// ... specifically, you wait this many times:
 	int semaphore_passes_pending;
+
+	// This lock is used when a render thread wants to mutate the engine's statistics.
+	pthread_mutex_t master_lock;
+	int total_passes_completed;
 
 	RenderEngine(int width, int height, Scene* scene);
 	~RenderEngine();

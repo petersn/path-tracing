@@ -267,6 +267,11 @@ void* RenderThread::render_thread_main(void* cookie) {
 
 		self->is_running = false;
 
+		// Increment this counter that is read by Progress{Display,Bar}.
+		pthread_mutex_lock(&self->parent->master_lock);
+		self->parent->total_passes_completed++;
+		pthread_mutex_unlock(&self->parent->master_lock);
+
 		// Inform our parent that a pass has been completed.
 		sem_post(&self->parent->passes_semaphore);
 	}
@@ -276,9 +281,10 @@ void* RenderThread::render_thread_main(void* cookie) {
 	return nullptr;
 }
 
-RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), height(height), scene(scene), total_passes(0), semaphore_passes_pending(0) {
+RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), height(height), scene(scene) {
 	// Initialize our semaphore before launching our threads. (It would also be okay to do it after, though.)
 	sem_init(&passes_semaphore, 0, 0);
+	pthread_mutex_init(&master_lock, NULL);
 	// Spawn our child threads.
 	for (int i = 0; i < get_optimal_thread_count(); i++)
 		workers.push_back(new RenderThread(this));
@@ -287,6 +293,9 @@ RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), 
 	// Set the default tile width and height to be the full canvas width and height.
 	tile_width = width;
 	tile_height = height;
+	total_passes_issued = 0;
+	total_passes_completed = 0;
+	semaphore_passes_pending = 0;
 }
 
 RenderEngine::~RenderEngine() {
@@ -299,13 +308,14 @@ RenderEngine::~RenderEngine() {
 	// TODO: Find a workaround for this so that users can intentionally throw away work and kill threads prematurely if they delete a RenderEngine before syncing.
 	sync();
 	sem_destroy(&passes_semaphore);
+	pthread_mutex_destroy(&master_lock);
 	// NB: There is no need to delete the RenderThreads here, because they delete themselves when they get the do_die message.
 	delete master_canvas;
 }
 
 void RenderEngine::issue_pass_desc(PassDescriptor desc) {
 	// Get a worker to dispatch to.
-	int worker = (total_passes++) % workers.size();
+	int worker = (total_passes_issued++) % workers.size();
 	workers[worker]->send_message(RenderMessage({false, desc}));
 	// Keep track of the total number of waits on passes_semaphore we need to be synced with all dispatched work.
 	semaphore_passes_pending++;

@@ -158,6 +158,8 @@ void Integrator::perform_pass() {
 			Color contribution = cast_ray(ray, 4, 1);
 			// Accumulate the energy into our buffer.
 			*canvas->pixel_ptr(x, y) += contribution;
+			// Mark that another pass is contributing to this pixel.
+			*canvas->per_pixel_passes_ptr(x, y) += 1;
 		}
 	}
 
@@ -288,7 +290,7 @@ int RenderEngine::rebuild_master_canvas() {
 		pthread_mutex_unlock(&worker->integrator_lock);
 	}
 	// Set the gain appropriately on the master canvas so it exports correctly.
-	master_canvas->gain = 255.0 / total_passes;
+//	master_canvas->gain = 255.0 / total_passes;
 	return total_passes;
 }
 

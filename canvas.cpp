@@ -6,21 +6,30 @@
 Canvas::Canvas(int _width, int _height) : width(_width), height(_height), gain(255.0) {
 	size = width * height;
 	pixels = new Color[size];
+	per_pixel_passes = new int[size];
 	depth_buffer = new Real[size];
 }
 
 Canvas::~Canvas() {
 	delete[] pixels;
+	delete[] per_pixel_passes;
 	delete[] depth_buffer;
 }
 
 void Canvas::zero() {
-	for (int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++) {
 		pixels[i] = Vec(0, 0, 0);
+		per_pixel_passes[i] = 0;
+		depth_buffer[i] = 0.0;
+	}
 }
 
 Color* Canvas::pixel_ptr(int x, int y) {
 	return pixels + (x + y * width);
+}
+
+int* Canvas::per_pixel_passes_ptr(int x, int y) {
+	return per_pixel_passes + (x + y * width);
 }
 
 Real* Canvas::depth_ptr(int x, int y) {
@@ -28,14 +37,18 @@ Real* Canvas::depth_ptr(int x, int y) {
 }
 
 void Canvas::get_pixel(int x, int y, uint8_t* dest) {
-	Color c = pixels[x + y * width];
+	// The pixel color is the total energy divided by the number of passes for this pixel.
+	Color c = pixels[x + y * width] / (Real) per_pixel_passes[x + y * width];
+	// TODO: Scene referred to display referred conversion and colorspace conversion here.
 	for (int i = 0; i < 3; i++)
 		dest[i] = (uint8_t)real_max(0.0, real_min(255.0, (Real)(c(i) * gain)));
 }
 
 void Canvas::add_from(Canvas* other) {
-	for (int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++) {
 		pixels[i] += other->pixels[i];
+		per_pixel_passes[i] += other->per_pixel_passes[i];
+	}
 }
 
 // This function basically entirely based on: http://www.lemoda.net/c/write-png/

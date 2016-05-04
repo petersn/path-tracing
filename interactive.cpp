@@ -47,7 +47,7 @@ void main_loop(void) {
 					} else if (ev.key.keysym.sym == SDLK_SPACE) {
 						char path[80];
 						sprintf(path, "render_passes=%04i.png", integrator->passes);
-						integrator->canvas->gain = gain;
+//						integrator->canvas->gain = gain;
 						integrator->canvas->save(path);
 						cout << "Saved to " << path << endl;
 					}

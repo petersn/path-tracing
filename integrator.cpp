@@ -320,7 +320,7 @@ int RenderEngine::rebuild_master_canvas() {
 		// This guarantees that we don't grab it in between two passes.
 		// This might cause us to block for seconds while we wait for a pass to complete!
 		// TODO: Implement double buffering so this isn't the case.
-		// XXX: For temporary debugging I've disabled these checks.
+		// XXX: For temporary debugging I've disabled these locks.
 //		pthread_mutex_lock(&worker->integrator_lock);
 		// Accumulate the energy from this worker.
 		master_canvas->add_from(worker->integrator->canvas);

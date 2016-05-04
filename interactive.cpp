@@ -95,7 +95,6 @@ void main_loop(void) {
 
 		int x, y;
 		Color* pixels = integrator->canvas->pixels;
-		int height = screen_height;
 		int width = screen_width;
 		gain = 255.0 / integrator->passes;
 		for (y = 0; y < screen_height; y++) {

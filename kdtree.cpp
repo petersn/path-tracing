@@ -266,8 +266,8 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 	}
 	// If not, we perform early out search against our nodes.
 	// Determine which side of the splitting plane the origin of the ray starts on.
-	Real high_side_minimum = high_side != nullptr ? high_side->aabb.minima(split_axis) : 0.0;
-	Real low_side_maximum  = low_side != nullptr ? low_side->aabb.minima(split_axis) : 0.0;
+//	Real high_side_minimum = high_side != nullptr ? high_side->aabb.minima(split_axis) : 0.0;
+//	Real low_side_maximum  = low_side != nullptr ? low_side->aabb.minima(split_axis) : 0.0;
 	Real origin = ray.origin(split_axis);
 	// Check if we're in both AABBs
 //	bool in_middle = origin < low_side_maximum and high_side_minimum < origin and low_side != nullptr and high_side != nullptr;

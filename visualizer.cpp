@@ -127,9 +127,12 @@ void ProgressBar::main_loop() {
 		gettimeofday(&stop, NULL);
 		timersub(&stop, &start, &result);
 		double elapsed = result.tv_sec + result.tv_usec * 1e-6;
-		// WARNING: We read total_passes_completed in a non-thread safe manner. Oh well.
+		// We grab the engine's master lock to avoid reading total_passes_completed while a thread is modifying it.
+		pthread_mutex_lock(&engine->master_lock);
 		completed = engine->total_passes_completed;
+		pthread_mutex_unlock(&engine->master_lock);
 		issued = engine->total_passes_issued;
+		// Compute various estimates of the time remaining, and format them.
 		double completion = completed / (double) issued;
 		double total_time = elapsed / real_max(1e-4, completion);
 		double remaining = total_time - elapsed;

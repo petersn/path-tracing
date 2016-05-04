@@ -10,7 +10,7 @@ using namespace std;
 #include "kdtree.h"
 
 #define LEAF_THRESHOLD 8
-#define MAXIMUM_DEPTH 22 //8
+#define MAXIMUM_DEPTH 19 //8
 // If a child would have this many or fewer triangles then we just build its node ourselves, rather than paying the overhead of dispatching to a thread.
 #define THREADED_DISPATCH_THRESHOLD 16
 
@@ -77,6 +77,7 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 	Real best_sh_so_far = 0.0;
 	int best_sh_axis = -1;
 	Real best_sh_score = FLOAT_INF;
+//	#pragma omp parallel for if(depth==0)
 	for (int potential_split_axis = 0; potential_split_axis < 3; potential_split_axis++) {
 		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test++) {
 			Real sample_sh = (*all_triangles)[all_our_indices[tri_test]].aabb.maxima(potential_split_axis);
@@ -144,8 +145,10 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 				assert(overlaps_below or overlaps_above);
 //				if (overlaps_below and overlaps_above)
 //					continue;
-				if (overlaps_below)
+				if (overlaps_below) {
 					low_side_sorted_by[minmax][axis]->push_back(triangle_index);
+					continue;
+				}
 				if (overlaps_above)
 					high_side_sorted_by[minmax][axis]->push_back(triangle_index);
 			}
@@ -263,10 +266,49 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 	}
 	// If not, we perform early out search against our nodes.
 	// Determine which side of the splitting plane the origin of the ray starts on.
-	bool on_high_side = ray.origin(split_axis) > split_height;
-	Real temp_hit_parameter;
-	kdTreeNode* near_side = on_high_side ? high_side : low_side;
-	kdTreeNode* far_side  = on_high_side ? low_side : high_side;
+	Real high_side_minimum = high_side != nullptr ? high_side->aabb.minima(split_axis) : 0.0;
+	Real low_side_maximum  = low_side != nullptr ? low_side->aabb.minima(split_axis) : 0.0;
+	Real origin = ray.origin(split_axis);
+	// Check if we're in both AABBs
+//	bool in_middle = origin < low_side_maximum and high_side_minimum < origin and low_side != nullptr and high_side != nullptr;
+	bool overlaps_high_side = high_side != nullptr and high_side->aabb.minima(split_axis) < origin;
+	bool overlaps_low_side  = low_side  != nullptr and origin <= low_side->aabb.maxima(split_axis);
+	bool overlaps_both = overlaps_high_side and overlaps_low_side;
+//	bool on_high_side = ray.origin(split_axis) > split_height;
+//	Real temp_hit_parameter;
+	kdTreeNode* near_side = overlaps_high_side ? high_side : low_side;
+	kdTreeNode* far_side  = overlaps_high_side ? low_side : high_side;
+//	// First we try intersecting against the near side.
+//	if (near_side != nullptr) {
+//		near_side->ray_test(ray, hit_parameter, hit_triangle);
+//	}
+//	// Next we 
+
+	// If we overlap both children, then we must test against both children.
+	if (overlaps_both) {
+		bool low_result = low_side->ray_test(ray, hit_parameter, hit_triangle);
+		Real temp_hit_parameter;
+		Triangle* temp_triangle;
+		bool high_result = high_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
+		// If there's no high side hit use the low side hit.
+		if (not high_result)
+			return low_result;
+		// If there's no low side hit use the high side hit.
+		if ((not low_result) or temp_hit_parameter < hit_parameter) {
+			hit_parameter = temp_hit_parameter;
+			if (hit_triangle != nullptr)
+				*hit_triangle = temp_triangle;
+		}
+		return true;
+	}
+//	bool near_result = near_side->ray_test(ray, hit_parameter, hit_triangle);
+//	if (near_result)
+//if (overlaps_low_side) {
+//		// Here we know we're on the low side and not on the high side.
+//		bool low_result = low_side->ray_test(ray, hit_parameter, hit_triangle);
+//		// If we get a hit then we can early out.
+//		if 
+//	}
 	if (near_side != nullptr) {
 		if (near_side->ray_test(ray, hit_parameter, hit_triangle)) {
 			// If we hit a near side triangle it is possible that it is a shared near/far triangle.
@@ -276,24 +318,30 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 			// the closest hit. Maybe I should add an "occlusion only" flag that skips this path for shadow rays?
 
 			// Compute the ray parameter of the split plane.
-			Real split_plane_ray_parameter_times_slope_towards_plane = split_height - ray.origin(split_axis);
-			bool hit_above_plane = hit_parameter * ray.direction(split_axis) > split_plane_ray_parameter_times_slope_towards_plane;
-			if (on_high_side != hit_above_plane) {
+			if (far_side == nullptr)
+				return true;
+			Real effective_far_side_split = near_side == low_side ? far_side->aabb.minima(split_axis) : far_side->aabb.maxima(split_axis);
+//			Real split_plane_ray_parameter_times_slope_towards_plane = effective_far_side_split - origin;
+			Real hit_parameter_of_far_side_aabb = (effective_far_side_split - origin) / ray.direction(split_axis);
+//			bool hit_above_plane = hit_parameter * ray.direction(split_axis) > split_plane_ray_parameter_times_slope_towards_plane;
+//			if (overlaps_high_side != hit_above_plane) {
+			if (hit_parameter > hit_parameter_of_far_side_aabb) {
 				Real temp_hit_parameter;
-				// If we end up having no far side we can just fall through.
-				if (far_side != nullptr) {
-					bool temp_result = far_side->ray_test(ray, temp_hit_parameter, hit_triangle);
-					// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
-//					assert(temp_result);
-					if (temp_result) {
-						// It never makes sense to get a worse collision from a far side hit from the far node.
-						// This is because the near side triangle we hit on the far side must also be a far side triangle!
-//						if (temp_hit_parameter > hit_parameter) {
-//							cout << temp_hit_parameter << " " << hit_parameter << "\n";
-//						}
-//						assert(temp_hit_parameter <= hit_parameter);
-						hit_parameter = temp_hit_parameter;
-					}
+				Triangle* temp_triangle;
+				bool temp_result = far_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
+				// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
+//				assert(temp_result);
+				if (temp_result and temp_hit_parameter < hit_parameter) {
+					// It never makes sense to get a worse collision from a far side hit from the far node.
+					// This is because the near side triangle we hit on the far side must also be a far side triangle!
+//					if (temp_hit_parameter > hit_parameter) {
+//						cout << temp_hit_parameter << " " << hit_parameter << "\n";
+//					}
+//					assert(temp_hit_parameter <= hit_parameter);
+//					hit_parameter = real_min(temp_hit_parameter, hit_parameter);
+					hit_parameter = temp_hit_parameter;
+					if (hit_triangle != nullptr)
+						*hit_triangle = temp_triangle;
 				}
 			}
 			// If the above check fails, then the hit is near side, and there's no need to check the far side.
@@ -408,7 +456,7 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 	int thread_count = 4;
 	total_job_count = 0;
 	// Initialize our synchronization structures.
-	// NB: I had a horrible bug where had these three lines below the thread spawning, and it caused subtle misbehavior.
+	// NB: I had a horrible bug where I had these three lines below the thread spawning, and it caused subtle misbehavior.
 	sem_init(&job_available, 0, 0);
 	sem_init(&jobs_all_done, 0, 0);
 	pthread_mutex_init(&job_lock, NULL);

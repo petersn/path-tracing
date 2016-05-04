@@ -87,7 +87,6 @@ struct RenderEngine {
 	int width, height;
 	Scene* scene;
 	Canvas* master_canvas;
-	int total_passes;
 	int total_passes_issued;
 	int tile_width, tile_height;
 

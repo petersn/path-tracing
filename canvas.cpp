@@ -33,6 +33,11 @@ void Canvas::get_pixel(int x, int y, uint8_t* dest) {
 		dest[i] = (uint8_t)real_max(0.0, real_min(255.0, (Real)(c(i) * gain)));
 }
 
+void Canvas::add_from(Canvas* other) {
+	for (int i = 0; i < size; i++)
+		pixels[i] += other->pixels[i];
+}
+
 // This function basically entirely based on: http://www.lemoda.net/c/write-png/
 int Canvas::save(std::string path) {
 	FILE* fp;

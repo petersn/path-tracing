@@ -162,3 +162,9 @@ Vec sample_unit_sphere(mt19937& engine) {
 	return samples;
 }
 
+int get_optimal_thread_count() {
+	// TODO: Figure out the right way of getting this.
+	return 4;
+}
+
+

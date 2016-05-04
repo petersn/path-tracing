@@ -453,7 +453,7 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 
 	// Start up a thread pool to spawn the jobs off to.
 #ifdef THREADED_KD_BUILD
-	int thread_count = 4;
+	int thread_count = get_optimal_thread_count();
 	total_job_count = 0;
 	// Initialize our synchronization structures.
 	// NB: I had a horrible bug where I had these three lines below the thread spawning, and it caused subtle misbehavior.

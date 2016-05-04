@@ -18,6 +18,7 @@ public:
 	Color* pixel_ptr(int x, int y);
 	Real* depth_ptr(int x, int y);
 	void get_pixel(int x, int y, uint8_t* dest);
+	void add_from(Canvas* other);
 	int save(std::string path);
 };
 

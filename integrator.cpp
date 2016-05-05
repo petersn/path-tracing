@@ -350,30 +350,20 @@ void RenderEngine::perform_full_passes(int pass_count) {
 //	while (pass_count--)
 //		perform_full_pass();
 	// Cover the scene in tiles.
-	if (pass_count <= 0)
-		return;
 	vector<pair<int, int>> tile_spots;
-	int overall_tiles;
-	for (int overall_sweeps = 0; overall_sweeps < 2; overall_sweeps++) {
-		overall_tiles = 0;
-		int next_y = 0;
-		while (next_y < height) {
-			int next_x = 0;
-			while (next_x < width) {
-				int passes_in_this_sweep = overall_sweeps == 0 ? 1 : pass_count - 1;
-				for (int j = 0; j < passes_in_this_sweep; j++)
-					tile_spots.push_back(pair<int, int>(next_x, next_y));
-				next_x += tile_width;
-				overall_tiles++;
-			}
-			next_y += tile_height;
+	int next_y = 0;
+	while (next_y < height) {
+		int next_x = 0;
+		while (next_x < width) {
+			for (int j = 0; j < pass_count; j++)
+				tile_spots.push_back(pair<int, int>(next_x, next_y));
+			next_x += tile_width;
 		}
+		next_y += tile_height;
 	}
 	global_tile_center_x = (width - tile_width) / 2.0;
 	global_tile_center_y = (height - tile_height) / 2.0;
-	// We start sorting only the passes after the first complete pass so that the
-	// user can see the whole image rendered with one sample before we start refining.
-	stable_sort(tile_spots.begin() + overall_tiles, tile_spots.end(), tile_compare);
+	stable_sort(tile_spots.begin(), tile_spots.end(), tile_compare);
 	// Push all the pairs.
 	for (auto spot : tile_spots)
 		issue_pass_desc(PassDescriptor(spot.first, spot.second, tile_width, tile_height));

@@ -139,10 +139,10 @@ void ProgressBar::main_loop() {
 		string str_elapsed = format_seconds_as_hms(elapsed, 7);
 		string str_remaining = format_seconds_as_hms(remaining, 7);
 		string str_total_time = format_seconds_as_hms(total_time, 7);
-		printf("\r[%6.2f%%] Elapsed: %s Remaining: %s Total: %s Tile samples: %i/%i", 100.0 * completion, str_elapsed.c_str(), str_remaining.c_str(), str_total_time.c_str(), completed, issued);
+		printf("\r[\033[93m%6.2f%%\033[0m] \033[94mElapsed:\033[0m %s   \033[94mRemaining:\033[0m %s   \033[94mTotal:\033[0m %s   \033[94mTile samples:\033[0m %i/%i", 100.0 * completion, str_elapsed.c_str(), str_remaining.c_str(), str_total_time.c_str(), completed, issued);
 		fflush(stdout);
 		usleep(321456);
 	} while (completed < issued);
-	printf(" Done!\n");
+	printf(" \033[92mDone!\033[0m\n");
 }
 

@@ -28,10 +28,10 @@ int main(int argc, char** argv) {
 	engine->tile_width = 64;
 	engine->tile_height = 64;
 
-	auto display = new ProgressDisplay(engine);
-	display->init();
+	auto display = new ProgressBar(engine);
+//	display->init();
 
-	engine->perform_full_passes(50);
+	engine->perform_full_passes(6);
 	display->main_loop();
 	engine->sync();
 	engine->rebuild_master_canvas();
@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
 	cout << endl;
 	cout << "Rays cast: " << rays_cast << endl;
 	cout << "Triangle tests: " << triangle_tests << endl;
+	cout << "Triangles per ray: " << triangle_tests / (double) rays_cast << endl;
 
 	delete scene;
 }

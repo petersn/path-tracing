@@ -67,6 +67,7 @@ struct AABB {
 	void update(const AABB& other);
 	bool does_ray_intersect(const CastingRay& ray);
 	void surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high);
+	int longest_axis();
 };
 
 struct Triangle {

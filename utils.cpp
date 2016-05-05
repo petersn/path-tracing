@@ -100,6 +100,16 @@ void AABB::surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_
 	sa_high = 2 * area + perimeter * high_thickness;
 }
 
+int AABB::longest_axis() {
+	Vec lengths = maxima - minima;
+	if (lengths(0) >= lengths(1) and lengths(0) >= lengths(2))
+		return 0;
+	if (lengths(1) >= lengths(0) and lengths(1) >= lengths(2))
+		return 1;
+	// This is the default direction a lot of the time.
+	return 2;
+}
+
 Triangle::Triangle() {
 }
 

@@ -77,9 +77,34 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 	Real best_sh_so_far = 0.0;
 	int best_sh_axis = -1;
 	Real best_sh_score = FLOAT_INF;
+	// Here we pick the sparsity with which to check the triangles as potential splits.
+	// A simple exponential scheme is chosen, with more refinement for fewer triangles.
+	// Some quick experiments I ran showed that this scheme results in about 0.4% more
+	// ray-triangle intersections per ray than simply trying every triangle. However,
+	// this scheme more than doubles the speed of building on a 1.1M triangle test
+	// model, specifically taking it down from ~15 seconds to ~7 seconds. If we say
+	// that thirty minutes of rendering per BVH rebuild is our typical use case when
+	// being used for animation then this is net neutral.
+//#define PRECISE_BVH
+#ifdef PRECISE_BVH
+	int triangle_increment = 1;
+#else
+	int triangle_increment = 8;
+	if (triangle_count < 10000)
+		triangle_increment = 4;
+	if (triangle_count < 1000)
+		triangle_increment = 2;
+	if (triangle_count < 100)
+		triangle_increment = 1;
+#endif
+	// XXX: Debugging.
+	if (depth == 0)
+		start_performance_counter();
 //	#pragma omp parallel for if(depth==0)
 	for (int potential_split_axis = 0; potential_split_axis < 3; potential_split_axis++) {
-		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test++) {
+//	{
+//		int potential_split_axis = aabb.longest_axis();
+		for (unsigned int tri_test = 0; tri_test < triangle_count; tri_test += triangle_increment) {
 			Real sample_sh = (*all_triangles)[all_our_indices[tri_test]].aabb.maxima(potential_split_axis);
 			// Apply binary search to count in log(n) time how many triangles will be above and how many will be below.
 			int count_on_side[2] = {0, 0};
@@ -109,7 +134,7 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 //			assert(high_sa >= 0);
 //			Real score = low_sa * count_on_side[0] + high_sa * count_on_side[1];
 //			score /= (low_sa + high_sa);
-//			score += mini_score * 0.1;
+//			score += mini_score * 0.2;
 //			score = mini_score;
 			if (score < best_sh_score) {
 				best_sh_so_far = sample_sh;
@@ -117,6 +142,11 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 				best_sh_score = score;
 			}
 		}
+	}
+	if (depth == 0) {
+		cout << "Time for first sort: ";
+		print_performance_counter();
+		cout << endl;
 	}
 	split_axis = best_sh_axis;
 	assert(split_axis == 0 or split_axis == 1 or split_axis == 2);
@@ -171,7 +201,7 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 	unsigned int high_size = high_side_sorted_by_min[0]->size();
 	// Make sure we didn't drop any triangles.
 	// This assert should be mutually redundant with the above assert of (overlaps_below or overlaps_above).
-//	assert(low_size + high_size >= triangle_count);
+	assert(low_size + high_size == triangle_count);
 	// If we failed to improve, become a leaf.
 	if (high_size == triangle_count or low_size == triangle_count) {
 //	if (high_size == triangle_count and low_size == triangle_count) {

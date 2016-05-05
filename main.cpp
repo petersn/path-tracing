@@ -24,14 +24,14 @@ int main(int argc, char** argv) {
 
 	start_performance_counter();
 
-	auto engine = new RenderEngine(1366, 768, scene);
-	engine->tile_width = 32;
-	engine->tile_height = 32;
+	auto engine = new RenderEngine(1920, 1080, scene);
+	engine->tile_width = 64;
+	engine->tile_height = 64;
 
 	auto display = new ProgressBar(engine);
 //	display->init();
 
-	engine->perform_full_passes(10);
+	engine->perform_full_passes(200);
 //	engine->sync();
 //	engine->rebuild_master_canvas();
 	display->main_loop();

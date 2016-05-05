@@ -397,3 +397,14 @@ int RenderEngine::rebuild_master_canvas() {
 	return total_passes;
 }
 
+void RenderEngine::zero() {
+	// First we sync.
+	sync();
+	// Once we're synced we know that all the worker threads must be waiting on their semaphores.
+	// It is therefore safe to start mucking around with their canvases and mutating our state without locking.
+	total_passes_issued = 0;
+	total_passes_completed = 0;
+	for (auto worker : workers)
+		worker->integrator->canvas->zero();
+}
+

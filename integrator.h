@@ -110,6 +110,8 @@ struct RenderEngine {
 	void sync();
 	// This routine accumulates the energy from various workers, sums it into master_canvas, and returns the number of passes averaged over.
 	int rebuild_master_canvas();
+	// This routine syncs with the workers and resets all counters and clears all canvases.
+	void zero();
 };
 
 #endif

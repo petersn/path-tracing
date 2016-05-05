@@ -1,0 +1,6 @@
+*.o
+inputs/
+.OLD/
+animate
+example
+interactive

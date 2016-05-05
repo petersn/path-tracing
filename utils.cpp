@@ -8,6 +8,7 @@
 
 using namespace std;
 #include <iostream>
+#include <thread>
 
 long long triangle_tests;
 
@@ -165,8 +166,18 @@ Vec sample_unit_sphere(mt19937& engine) {
 }
 
 int get_optimal_thread_count() {
-	// TODO: Figure out the right way of getting this.
-	return 4;
+	static bool have_gotten_answer = false;
+	static int answer;
+	if (not have_gotten_answer) {
+		answer = thread::hardware_concurrency();
+		// If the underlying system isn't sure default to 8.
+		// Some day around 2040 I'm going to laugh at myself for setting this to merely 8...
+		if (answer <= 0)
+			answer = 8;
+		have_gotten_answer = true;
+		cout << "Using " << answer << " threads." << endl;
+	}
+	return answer;
 }
 
 struct timeval perf_counter_start;

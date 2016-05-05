@@ -164,7 +164,11 @@ void Integrator::perform_pass(PassDescriptor desc) {
 	// Used for DOF offsets.
 	// NB: By using a normal here I effectively have an aperature with a Gaussian response across its surface.
 	// This is a really weird assumption to make!
-	normal_distribution<> dist(0, 1);
+	normal_distribution<> normal_dist(0, 1);
+
+	// Used for anti-aliasing sampling.
+	uniform_real_distribution<> uniform_dist(-0.5, 0.5);
+
 	Real plane_of_focus_distance = scene->plane_of_focus_distance;
 	Real dof_dispersion = scene->dof_dispersion;
 
@@ -179,13 +183,14 @@ void Integrator::perform_pass(PassDescriptor desc) {
 		for (int x = desc.start_x; x < desc.start_x + desc.width; x++) {
 //	for (int y = 0; y < canvas->height; y++) {
 //		for (int x = 0; x < canvas->width; x++) {
-			Real dx = scene->camera_image_plane_width * (x - canvas->width / 2) / (Real) canvas->width;
-			Real dy = -scene->camera_image_plane_width * (y - canvas->height / 2) * aspect_ratio / (Real) canvas->height;
+			Real dx = scene->camera_image_plane_width * (x + uniform_dist(engine) - canvas->width / 2.0) / (Real) canvas->width;
+			Real dy = -scene->camera_image_plane_width * (y + uniform_dist(engine) - canvas->height / 2.0) * aspect_ratio / (Real) canvas->height;
 			// Compute an offset into the image plane that the camera should face.
 			Vec offset = camera_right * dx + camera_up * dy;
 			Ray ray(scene->main_camera.origin, scene->main_camera.direction + offset);
-			Real dof_x_offset = dist(engine) * dof_dispersion;
-			Real dof_y_offset = dist(engine) * dof_dispersion;
+			// Add a depth of field perturbation.
+			Real dof_x_offset = normal_dist(engine) * dof_dispersion;
+			Real dof_y_offset = normal_dist(engine) * dof_dispersion;
 			ray.origin += dof_x_offset * camera_right;
 			ray.origin += dof_y_offset * camera_up;
 			ray.direction -= (dof_x_offset / plane_of_focus_distance) * camera_right;

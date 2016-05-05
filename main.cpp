@@ -31,10 +31,10 @@ int main(int argc, char** argv) {
 	auto display = new ProgressBar(engine);
 //	display->init();
 
-	engine->perform_full_passes(200);
-//	engine->sync();
-//	engine->rebuild_master_canvas();
+	engine->perform_full_passes(300);
 	display->main_loop();
+	engine->sync();
+	engine->rebuild_master_canvas();
 
 	engine->master_canvas->save("output.png");
 	delete engine;
@@ -42,6 +42,8 @@ int main(int argc, char** argv) {
 	cout << "Total time to render: ";
 	print_performance_counter();
 	cout << endl;
+	cout << "Rays cast: " << rays_cast << endl;
+	cout << "Triangle tests: " << triangle_tests << endl;
 
 	delete scene;
 }

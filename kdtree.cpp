@@ -268,7 +268,7 @@ kdTreeNode::~kdTreeNode() {
 	delete high_side;
 }
 
-bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
+bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Triangle** hit_triangle) {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray))
 		return false;
@@ -280,7 +280,7 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 		for (int i = 0; i < stored_triangle_count; i++) {
 			Real temp_hit_parameter;
 			Triangle* temp_hit_triangle;
-			bool result = stored_triangles[i].ray_test(ray, temp_hit_parameter, &temp_hit_triangle);
+			bool result = stored_triangles[i].ray_test(ray.ray, temp_hit_parameter, &temp_hit_triangle);
 			if (result and temp_hit_parameter < best_hit_parameter) {
 				best_hit_parameter = temp_hit_parameter;
 				best_hit_triangle = temp_hit_triangle;
@@ -298,7 +298,7 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 	// Determine which side of the splitting plane the origin of the ray starts on.
 //	Real high_side_minimum = high_side != nullptr ? high_side->aabb.minima(split_axis) : 0.0;
 //	Real low_side_maximum  = low_side != nullptr ? low_side->aabb.minima(split_axis) : 0.0;
-	Real origin = ray.origin(split_axis);
+	Real origin = ray.ray.origin(split_axis);
 	// Check if we're in both AABBs
 //	bool in_middle = origin < low_side_maximum and high_side_minimum < origin and low_side != nullptr and high_side != nullptr;
 	bool overlaps_high_side = high_side != nullptr and high_side->aabb.minima(split_axis) < origin;
@@ -352,7 +352,7 @@ bool kdTreeNode::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tr
 				return true;
 			Real effective_far_side_split = near_side == low_side ? far_side->aabb.minima(split_axis) : far_side->aabb.maxima(split_axis);
 //			Real split_plane_ray_parameter_times_slope_towards_plane = effective_far_side_split - origin;
-			Real hit_parameter_of_far_side_aabb = (effective_far_side_split - origin) / ray.direction(split_axis);
+			Real hit_parameter_of_far_side_aabb = (effective_far_side_split - origin) / ray.ray.direction(split_axis);
 //			bool hit_above_plane = hit_parameter * ray.direction(split_axis) > split_plane_ray_parameter_times_slope_towards_plane;
 //			if (overlaps_high_side != hit_above_plane) {
 			if (hit_parameter > hit_parameter_of_far_side_aabb) {

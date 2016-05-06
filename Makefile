@@ -14,6 +14,13 @@ CPPFLAGS+=-DTHREADED_KD_BUILD
 # Option: Parallelize sampling the image.
 CPPFLAGS+=-DTHREADED_SAMPLING
 
+# Option: Use precise BVHs for super-duper long renders.
+CPPFLAGS+=-DPRECISE_BVH
+
+# Option: Use link-time optimization.
+CPPFLAGS+=-flto
+LINKFLAGS+=-O3 -ffast-math -flto -g
+
 # Option: Use OpenMP to parallelize sampling.
 #CPPFLAGS+=-fopenmp
 #LINKFLAGS+=-fopenmp

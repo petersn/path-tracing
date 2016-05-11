@@ -15,7 +15,7 @@ CPPFLAGS+=-DTHREADED_KD_BUILD
 CPPFLAGS+=-DTHREADED_SAMPLING
 
 # Option: Use precise BVHs for super-duper long renders.
-CPPFLAGS+=-DPRECISE_BVH
+#CPPFLAGS+=-DPRECISE_BVH
 
 # Option: Use link-time optimization.
 CPPFLAGS+=-flto
@@ -35,6 +35,9 @@ interactive: $(OBJECTS) interactive.o
 
 animate: $(OBJECTS) animate.o
 	g++ -o $@ $^ $(LINKFLAGS)
+
+cli_render: $(OBJECTS) cli_render.o
+	g++ -o $@ $^ $(LINKFLAGS) -lboost_program_options
 
 .PHONY: clean
 clean:

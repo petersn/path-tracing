@@ -31,7 +31,7 @@ Scene::Scene(string path) : main_camera(Vec(-1, 0, 0), Vec(1, 0, 0)) {
 	// Print some stats.
 	int deepest = 0, biggest = 0;
 	tree->root->get_stats(deepest, biggest);
-	cout << "kdTree depth = " << deepest << " max leaf size = " << biggest << endl;
+//	cout << "kdTree depth = " << deepest << " max leaf size = " << biggest << endl;
 
 	// Allocate empty storage.
 	lights = new vector<Light>();

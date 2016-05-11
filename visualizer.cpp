@@ -120,13 +120,18 @@ ProgressBar::ProgressBar(RenderEngine* engine) : engine(engine) {
 	gettimeofday(&start, NULL);
 }
 
+bool ProgressBar::init() {
+	return true;
+}
+
 void ProgressBar::main_loop() {
 	int completed, issued;
+	double elapsed;
 	do {
 		struct timeval stop, result;
 		gettimeofday(&stop, NULL);
 		timersub(&stop, &start, &result);
-		double elapsed = result.tv_sec + result.tv_usec * 1e-6;
+		elapsed = result.tv_sec + result.tv_usec * 1e-6;
 		// We grab the engine's master lock to avoid reading total_passes_completed while a thread is modifying it.
 		pthread_mutex_lock(&engine->master_lock);
 		completed = engine->total_passes_completed;
@@ -143,6 +148,8 @@ void ProgressBar::main_loop() {
 		fflush(stdout);
 		usleep(321456);
 	} while (completed < issued);
-	printf(" \033[92mDone!\033[0m\n");
+	// Compute the arbitrary performance metric.
+	double performance = rays_cast / elapsed;
+	printf(" \033[92mDone!\033[0m Perf: %.1fMr/s\n", performance * 1e-6);
 }
 

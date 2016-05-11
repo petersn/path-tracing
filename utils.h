@@ -86,6 +86,7 @@ struct Triangle {
 
 Vec sample_unit_sphere(std::mt19937& engine);
 
+void override_thread_count(int thread_count);
 int get_optimal_thread_count();
 void start_performance_counter();
 void print_performance_counter();

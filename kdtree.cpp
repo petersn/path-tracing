@@ -144,9 +144,9 @@ kdTreeNode::kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by
 		}
 	}
 	if (depth == 0) {
-		cout << "Time for first sort: ";
-		print_performance_counter();
-		cout << endl;
+//		cout << "Time for first sort: ";
+//		print_performance_counter();
+//		cout << endl;
 	}
 	split_axis = best_sh_axis;
 	assert(split_axis == 0 or split_axis == 1 or split_axis == 2);
@@ -553,7 +553,7 @@ kdTree::kdTree(vector<Triangle>* _all_triangles) {
 	gettimeofday(&stop, NULL);
 	timersub(&stop, &start, &result);
 	double elapsed_time = result.tv_sec + result.tv_usec * 1e-6;
-	cout << "Elapsed build time: " << elapsed_time << endl;
+//	cout << "Elapsed build time: " << elapsed_time << endl;
 }
 
 kdTree::~kdTree() {

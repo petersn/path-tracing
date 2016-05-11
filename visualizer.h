@@ -7,7 +7,14 @@
 #include <SDL.h>
 #include "integrator.h"
 
-class ProgressDisplay {
+class ProgressReporter {
+public:
+	virtual ~ProgressReporter() {};
+	virtual bool init() = 0;
+	virtual void main_loop() = 0;
+};
+
+class ProgressDisplay : public ProgressReporter {
 	int screen_width, screen_height;
 	SDL_Surface* screen;
 	RenderEngine* engine;
@@ -20,12 +27,13 @@ public:
 	void main_loop();
 };
 
-class ProgressBar {
+class ProgressBar : public ProgressReporter {
 	RenderEngine* engine;
 	struct timeval start;
 
 public:
 	ProgressBar(RenderEngine* engine);
+	bool init();
 	void main_loop();
 };
 

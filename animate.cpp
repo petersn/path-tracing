@@ -25,16 +25,18 @@ int main(int argc, char** argv) {
 
 	for (int frame = 0; frame < 100; frame++) {
 		engine->zero();
-		Real angle = frame * 0.05;
+		Real angle = 20.0 * 0.05; //frame * 0.05;
+//		Real angle = frame * 0.05;
 		scene->main_camera.origin = -5 * Vec(cos(angle), sin(angle), 0.0);
 		scene->main_camera.direction = -scene->main_camera.origin;
 		scene->main_camera.direction.normalize();
 		scene->main_camera.origin += Vec(0.0, 0.0, 0.2);
+		scene->plane_of_focus_distance = 3.5 + frame / 33.0;
 
 		auto display = new ProgressBar(engine);
 //		display->init();
 
-		engine->perform_full_passes(60);
+		engine->perform_full_passes(100);
 		display->main_loop();
 		engine->sync();
 		engine->rebuild_master_canvas();

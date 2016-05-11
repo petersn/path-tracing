@@ -20,18 +20,18 @@ int main(int argc, char** argv) {
 	scene->main_camera.direction.normalize();
 	scene->main_camera.origin += Vec(0.0, 0.0, 0.2);
 	scene->plane_of_focus_distance = 4.5;
-	scene->dof_dispersion = 0.4;
+	scene->dof_dispersion = 0.1;
 
 	start_performance_counter();
 
-	auto engine = new RenderEngine(1920, 1080, scene);
+	auto engine = new RenderEngine(1920*2, 1080*2, scene);
 	engine->tile_width = 64;
 	engine->tile_height = 64;
 
 	auto display = new ProgressBar(engine);
 //	display->init();
 
-	engine->perform_full_passes(2000);
+	engine->perform_full_passes(1000);
 	display->main_loop();
 	engine->sync();
 	engine->rebuild_master_canvas();

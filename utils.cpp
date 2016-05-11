@@ -175,6 +175,15 @@ Vec sample_unit_sphere(mt19937& engine) {
 	return samples;
 }
 
+bool thread_count_is_overridden = false;
+int overridden_thread_count;
+
+void override_thread_count(int thread_count) {
+	// If the thread count is zero then we don't override.
+	thread_count_is_overridden = thread_count != 0;
+	overridden_thread_count = thread_count;
+}
+
 int get_optimal_thread_count() {
 	static bool have_gotten_answer = false;
 	static int answer;
@@ -182,11 +191,17 @@ int get_optimal_thread_count() {
 		answer = thread::hardware_concurrency();
 		// If the underlying system isn't sure default to 8.
 		// Some day around 2040 I'm going to laugh at myself for setting this to merely 8...
-		if (answer <= 0)
+		if (answer <= 0) {
 			answer = 8;
+			cout << "Calling thread::hardware_concurrency() gave 0, defaulting to " << answer << " threads." << endl;
+		}
 		have_gotten_answer = true;
-		cout << "Using " << answer << " threads." << endl;
 	}
+	if (thread_count_is_overridden) {
+//		cout << "Overriding with " << overridden_thread_count << " threads." << endl;
+		return overridden_thread_count;
+	}
+//	cout << "Using " << answer << " threads." << endl;
 	return answer;
 }
 

@@ -45,10 +45,10 @@ void ProgressDisplay::main_loop() {
 			// Close prematurely if the user hits esc or hits the X in the window decoration.
 			switch (ev.type) {
 				case SDL_QUIT:
-					return;
+					goto stop_rendering;
 				case SDL_KEYDOWN:
 					if (ev.key.keysym.sym == 27)
-						return;
+						goto stop_rendering;
 					break;
 			}
 		}
@@ -112,6 +112,7 @@ void ProgressDisplay::main_loop() {
 		// This call actually makes our changes visible, by flipping the double buffer.
 		SDL_Flip(screen);
 	}
+stop_rendering:
 	SDL_Quit();
 	exit(1);
 }

@@ -56,7 +56,7 @@ void AABB::update(const AABB& other) {
 #define PRINT_VEC(v) \
 	cout << v(0) << ", " << v(1) << ", " << v(2) << "\n\n";
 
-bool AABB::does_ray_intersect(const CastingRay& ray) {
+bool AABB::does_ray_intersect(const CastingRay& ray) const {
 	Vec t0 = (minima - ray.ray.origin).array() * ray.recip_deltas.array();
 	Vec t1 = (maxima - ray.ray.origin).array() * ray.recip_deltas.array();
 	Vec entrance_times = vec_min(t0, t1);
@@ -82,7 +82,7 @@ bool AABB::does_ray_intersect(const CastingRay& ray) {
 	return true;
 }
 
-void AABB::surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high) {
+void AABB::surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high) const {
 	// Compute the perimeter and area of the face normal to `axis`.
 	Real perimeter = 0.0;
 	Real area = 1.0;
@@ -100,7 +100,7 @@ void AABB::surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_
 	sa_high = 2 * area + perimeter * high_thickness;
 }
 
-int AABB::longest_axis() {
+int AABB::longest_axis() const {
 	Vec lengths = maxima - minima;
 	if (lengths(0) >= lengths(1) and lengths(0) >= lengths(2))
 		return 0;
@@ -129,7 +129,7 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 }
 
 // Performs M\"oller-Trumbore intersection as per Wikipedia.
-bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
+bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) const {
 	triangle_tests++;
 	Vec P = ray.direction.cross(edge02);
 	Real det = edge01.dot(P);
@@ -154,13 +154,13 @@ bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_tria
 	return true;
 }
 
-Vec Triangle::project_point_to_given_altitude(Vec point, Real desired_altitude) {
+Vec Triangle::project_point_to_given_altitude(Vec point, Real desired_altitude) const {
 	Real parameter = normal.dot(point);
 	Real change = (plane_parameter - parameter) + desired_altitude;
 	return point + change * normal;
 }
 
-bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) {
+bool Triangle::intersects_axis_aligned_plane(int axis, Real plane_height) const {
 	assert(false); // TODO: Implement this.
 	return true;
 }

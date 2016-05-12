@@ -65,9 +65,9 @@ struct AABB {
 	void set_to_point(Vec p);
 	void update(Vec p);
 	void update(const AABB& other);
-	bool does_ray_intersect(const CastingRay& ray);
-	void surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high);
-	int longest_axis();
+	bool does_ray_intersect(const CastingRay& ray) const;
+	void surface_areas_on_sides_of_split_axis(int axis, Real height, Real& sa_low, Real& sa_high) const;
+	int longest_axis() const;
 };
 
 struct Triangle {
@@ -79,9 +79,9 @@ struct Triangle {
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);
-	bool ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle);
-	Vec project_point_to_given_altitude(Vec point, Real desired_altitude);
-	bool intersects_axis_aligned_plane(int axis, Real plane_height);
+	bool ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) const;
+	Vec project_point_to_given_altitude(Vec point, Real desired_altitude) const;
+	bool intersects_axis_aligned_plane(int axis, Real plane_height) const;
 };
 
 Vec sample_unit_sphere(std::mt19937& engine);

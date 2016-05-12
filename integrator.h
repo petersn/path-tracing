@@ -80,6 +80,7 @@ struct RenderThread {
 	RenderThread(RenderEngine* parent);
 	~RenderThread();
 	void send_message(RenderMessage message);
+	void kill_immediately();
 	static void* render_thread_main(void* cookie);
 };
 
@@ -108,6 +109,9 @@ struct RenderEngine {
 	void perform_full_passes(int pass_count);
 	// This routine makes sure all the workers are done rendering.
 	void sync();
+	// Kills all the workers, potentially part way through passes.
+	// This is permanently fatal! After this routine you may not issue any more passes.
+	void kill_workers();
 	// This routine accumulates the energy from various workers, sums it into master_canvas, and returns the number of passes averaged over.
 	int rebuild_master_canvas();
 	// This routine syncs with the workers and resets all counters and clears all canvases.

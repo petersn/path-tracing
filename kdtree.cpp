@@ -268,7 +268,7 @@ kdTreeNode::~kdTreeNode() {
 	delete high_side;
 }
 
-bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Triangle** hit_triangle) {
+bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Triangle** hit_triangle) const {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray))
 		return false;
@@ -276,10 +276,10 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Triangle**
 	if (is_leaf) {
 		bool overall_result = false;
 		Real best_hit_parameter = FLOAT_INF;
-		Triangle* best_hit_triangle = nullptr;
+		const Triangle* best_hit_triangle = nullptr;
 		for (int i = 0; i < stored_triangle_count; i++) {
 			Real temp_hit_parameter;
-			Triangle* temp_hit_triangle;
+			const Triangle* temp_hit_triangle;
 			bool result = stored_triangles[i].ray_test(ray.ray, temp_hit_parameter, &temp_hit_triangle);
 			if (result and temp_hit_parameter < best_hit_parameter) {
 				best_hit_parameter = temp_hit_parameter;
@@ -318,7 +318,7 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Triangle**
 	if (overlaps_both) {
 		bool low_result = low_side->ray_test(ray, hit_parameter, hit_triangle);
 		Real temp_hit_parameter;
-		Triangle* temp_triangle;
+		const Triangle* temp_triangle;
 		bool high_result = high_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
 		// If there's no high side hit use the low side hit.
 		if (not high_result)
@@ -357,7 +357,7 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Triangle**
 //			if (overlaps_high_side != hit_above_plane) {
 			if (hit_parameter > hit_parameter_of_far_side_aabb) {
 				Real temp_hit_parameter;
-				Triangle* temp_triangle;
+				const Triangle* temp_triangle;
 				bool temp_result = far_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
 				// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
 //				assert(temp_result);
@@ -562,7 +562,7 @@ kdTree::~kdTree() {
 
 long long rays_cast = 0;
 
-bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle) {
+bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) {
 	rays_cast++;
 	return root->ray_test(ray, hit_parameter, hit_triangle);
 }

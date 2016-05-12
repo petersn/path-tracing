@@ -67,6 +67,9 @@ void ProgressDisplay::main_loop() {
 			for (int x = 0; x < screen_width; x++) {
 				unsigned char* pixel_pointer = ((unsigned char*)screen->pixels) + 4 * (x + y * screen_width);
 				engine->master_canvas->get_pixel(x, y, (uint8_t*)pixel_pointer);
+				unsigned char temp = pixel_pointer[2];
+				pixel_pointer[2] = pixel_pointer[0];
+				pixel_pointer[0] = temp;
 			}
 		}
 
@@ -114,7 +117,8 @@ void ProgressDisplay::main_loop() {
 	}
 stop_rendering:
 	SDL_Quit();
-	exit(1);
+//	engine->kill_workers();
+//	exit(1);
 }
 
 ProgressBar::ProgressBar(RenderEngine* engine) : engine(engine) {

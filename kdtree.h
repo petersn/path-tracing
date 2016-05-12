@@ -40,7 +40,7 @@ public:
 	kdTreeNode(kdTree* parent, int depth, vector<int>* sorted_indices_by_min[3], vector<int>* sorted_indices_by_max[3], vector<Triangle>* all_triangles);
 	~kdTreeNode();
 	void get_stats(int& deepest_depth, int& biggest_set);
-	bool ray_test(const CastingRay& ray, Real& hit_parameter, Triangle** hit_triangle=nullptr);
+	bool ray_test(const CastingRay& ray, Real& hit_parameter, const Triangle** hit_triangle=nullptr) const;
 };
 
 #ifdef THREADED_KD_BUILD
@@ -81,7 +81,7 @@ public:
 
 	kdTree(std::vector<Triangle>* all_triangles);
 	~kdTree();
-	bool ray_test(const Ray& ray, Real& hit_parameter, Triangle** hit_triangle=nullptr);
+	bool ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle=nullptr);
 };
 
 #endif

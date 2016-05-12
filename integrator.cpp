@@ -49,7 +49,7 @@ static inline Real square(Real x) {
 
 Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 	Real param;
-	Triangle* hit_triangle;
+	const Triangle* hit_triangle;
 	bool result = scene->tree->ray_test(ray, param, &hit_triangle);
 	Color energy(0, 0, 0);
 	if (result) {
@@ -57,6 +57,7 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 		// Lift the point off the surface.
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
 		Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
+		//*
 		if (recursions > 0) {
 			for (int branch = 0; branch < branches; branch++) {
 				// Compute a Lambertianly scattered ray.
@@ -72,6 +73,7 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 				energy += (1.0 / branches) * 0.8 * cast_ray(scattered_ray, recursions-1, 1);
 			}
 		}
+//		*/
 		// Color by lights.
 		for (auto& light : *scene->lights) {
 			// Cast a ray to the light.
@@ -240,6 +242,16 @@ void RenderThread::send_message(RenderMessage message) {
 	sem_post(&messages_semaphore);
 }
 
+void RenderThread::kill_immediately() {
+	pthread_mutex_lock(&messages_lock);
+	// Clear out all the other messages -- we're about to die, so this is okay,
+	// even though it makes messages_semaphore out of sync.
+	messages.clear();
+//	messages.push_back(RenderMessage({true, PassDescriptor()}));
+	pthread_mutex_unlock(&messages_lock);
+	sem_post(&messages_semaphore);
+}
+
 void* RenderThread::render_thread_main(void* cookie) {
 	RenderThread* self = (RenderThread*) cookie;
 	RenderMessage current_message;
@@ -312,6 +324,9 @@ RenderEngine::~RenderEngine() {
 	// Thus, the next thing we do is sync -- which blocks until all work is done, including all the work we're going to throw away.
 	// TODO: Find a workaround for this so that users can intentionally throw away work and kill threads prematurely if they delete a RenderEngine before syncing.
 	sync();
+	// Now we can join all the threads.
+	for (auto worker : workers)
+		pthread_join(worker->thread, nullptr);
 	sem_destroy(&passes_semaphore);
 	pthread_mutex_destroy(&master_lock);
 	// NB: There is no need to delete the RenderThreads here, because they delete themselves when they get the do_die message.
@@ -375,6 +390,16 @@ void RenderEngine::sync() {
 		semaphore_passes_pending--;
 		sem_wait(&passes_semaphore);
 	}
+}
+
+void RenderEngine::kill_workers() {
+	for (auto worker : workers)
+		worker->kill_immediately();
+	for (auto worker : workers)
+		pthread_join(worker->thread, nullptr);
+	// We set this to zero so that syncs will work after this.
+	// ... after all, we're definitionally synced with all the worker threads now.
+	semaphore_passes_pending = 0;
 }
 
 int RenderEngine::rebuild_master_canvas() {

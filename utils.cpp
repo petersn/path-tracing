@@ -254,3 +254,48 @@ string format_seconds_as_hms(double seconds, int width) {
 	return s;
 }
 
+// Taken from: http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+// ... from the answer posted by Leszek S.
+Pixel hsv_to_rgb(Pixel _hsv) {
+	unsigned char rgb[3];
+	unsigned char (&hsv)[3] = _hsv.x;
+	unsigned char region, remainder, p, q, t;
+
+	if (hsv[1] == 0) {
+		rgb[0] = hsv[2];
+		rgb[1] = hsv[2];
+		rgb[2] = hsv[2];
+		return Pixel({{rgb[0], rgb[1], rgb[2]}});
+	}
+
+	region = hsv[0] / 43;
+	remainder = (hsv[0] - (region * 43)) * 6;
+
+	p = (hsv[2] * (255 - hsv[1])) >> 8;
+	q = (hsv[2] * (255 - ((hsv[1] * remainder) >> 8))) >> 8;
+	t = (hsv[2] * (255 - ((hsv[1] * (255 - remainder)) >> 8))) >> 8;
+
+	switch (region) {
+		case 0:
+			rgb[0] = hsv[2]; rgb[1] = t; rgb[2] = p;
+			break;
+		case 1:
+			rgb[0] = q; rgb[1] = hsv[2]; rgb[2] = p;
+			break;
+		case 2:
+			rgb[0] = p; rgb[1] = hsv[2]; rgb[2] = t;
+			break;
+		case 3:
+			rgb[0] = p; rgb[1] = q; rgb[2] = hsv[2];
+			break;
+		case 4:
+			rgb[0] = t; rgb[1] = p; rgb[2] = hsv[2];
+			break;
+		default:
+			rgb[0] = hsv[2]; rgb[1] = p; rgb[2] = q;
+			break;
+	}
+
+	return Pixel({{rgb[0], rgb[1], rgb[2]}});
+}
+

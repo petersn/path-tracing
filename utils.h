@@ -92,5 +92,11 @@ void start_performance_counter();
 void print_performance_counter();
 std::string format_seconds_as_hms(double seconds, int width);
 
+struct Pixel {
+	unsigned char x[3];
+};
+
+Pixel hsv_to_rgb(Pixel hsv);
+
 #endif
 

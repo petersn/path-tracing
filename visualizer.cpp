@@ -38,6 +38,7 @@ bool ProgressDisplay::init() {
 }
 
 void ProgressDisplay::main_loop() {
+	bool holding[1024] = {0};
 	while (1) {
 		// We begin each loop by getting events.
 		SDL_Event ev;
@@ -49,6 +50,12 @@ void ProgressDisplay::main_loop() {
 				case SDL_KEYDOWN:
 					if (ev.key.keysym.sym == 27)
 						goto stop_rendering;
+					if (0 <= ev.key.keysym.sym and ev.key.keysym.sym < (sizeof(holding)/sizeof(*holding)))
+						holding[ev.key.keysym.sym] = true;
+					break;
+				case SDL_KEYUP:
+					if (0 <= ev.key.keysym.sym and ev.key.keysym.sym < (sizeof(holding)/sizeof(*holding)))
+						holding[ev.key.keysym.sym] = false;
 					break;
 			}
 		}
@@ -63,13 +70,26 @@ void ProgressDisplay::main_loop() {
 	        SDL_LockSurface(screen);
 
 		// Copy pixels from the master canvas into SDL's buffer.
-		for (int y = 0; y < screen_height; y++) {
-			for (int x = 0; x < screen_width; x++) {
-				unsigned char* pixel_pointer = ((unsigned char*)screen->pixels) + 4 * (x + y * screen_width);
-				engine->master_canvas->get_pixel(x, y, (uint8_t*)pixel_pointer);
-				unsigned char temp = pixel_pointer[2];
-				pixel_pointer[2] = pixel_pointer[0];
-				pixel_pointer[0] = temp;
+		if (not (holding[SDLK_LSHIFT] or holding[SDLK_RSHIFT])) {
+			for (int y = 0; y < screen_height; y++) {
+				for (int x = 0; x < screen_width; x++) {
+					unsigned char* pixel_pointer = ((unsigned char*)screen->pixels) + 4 * (x + y * screen_width);
+					engine->master_canvas->get_pixel(x, y, (uint8_t*)pixel_pointer);
+					unsigned char temp = pixel_pointer[2];
+					pixel_pointer[2] = pixel_pointer[0];
+					pixel_pointer[0] = temp;
+				}
+			}
+		} else {
+			for (int y = 0; y < screen_height; y++) {
+				for (int x = 0; x < screen_width; x++) {
+					unsigned char* pixel_pointer = ((unsigned char*)screen->pixels) + 4 * (x + y * screen_width);
+					int passes = *engine->master_canvas->per_pixel_passes_ptr(x, y);
+					Pixel rgb = hsv_to_rgb(Pixel({(unsigned char)(passes * 25), 200, 200}));
+					pixel_pointer[0] = rgb.x[2];
+					pixel_pointer[1] = rgb.x[1];
+					pixel_pointer[2] = rgb.x[0];
+				}
 			}
 		}
 

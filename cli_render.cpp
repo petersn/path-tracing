@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
 		("width", po::value<int>()->default_value(1920), "Width of rendered image.")
 		("height", po::value<int>()->default_value(1080), "Height of rendered image.")
 		("display", "Display render progress graphically.")
+		("progressive", po::value<int>(), "Render passes progressively.")
 		("threads", po::value<int>()->default_value(0), "Number of threads. (0 for auto)")
 		("angle", po::value<double>()->default_value(1.0), "Camera angle.")
 		("camera-altitude", po::value<double>()->default_value(0.2), "Camera altitude.")
@@ -105,7 +106,14 @@ int main(int argc, char** argv) {
 	else
 		pr = new ProgressBar(engine);
 	pr->init();
-	engine->perform_full_passes(vm["samples"].as<int>());
+	int samples_count = vm["samples"].as<int>();
+	if (vm.count("progressive")) {
+		int progressive_count = vm["progressive"].as<int>();
+		for (int i = 0; i < samples_count / progressive_count; i++)
+			engine->perform_full_passes(progressive_count);
+		engine->perform_full_passes(samples_count % progressive_count);
+	} else
+		engine->perform_full_passes(samples_count);
 	pr->main_loop();
 	delete pr;
 //	engine->sync();

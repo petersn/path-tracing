@@ -70,9 +70,11 @@ struct RenderThread {
 	volatile bool is_running;
 	volatile PassDescriptor currently_processing;
 
+/*
 	sem_t messages_semaphore;
 	pthread_mutex_t messages_lock;
 	std::list<RenderMessage> messages;
+*/
 
 	pthread_mutex_t integrator_lock;
 	Integrator* integrator;
@@ -97,6 +99,10 @@ struct RenderEngine {
 	sem_t passes_semaphore;
 	// ... specifically, you wait this many times:
 	int semaphore_passes_pending;
+
+	sem_t messages_semaphore;
+	pthread_mutex_t messages_lock;
+	std::list<RenderMessage> messages;
 
 	// This lock is used when a render thread wants to mutate the engine's statistics.
 	pthread_mutex_t master_lock;

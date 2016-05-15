@@ -218,8 +218,8 @@ void Integrator::perform_pass(PassDescriptor desc) {
 
 RenderThread::RenderThread(RenderEngine* parent) : parent(parent) {
 	// Launch an actual thread.
-	sem_init(&messages_semaphore, 0, 0);
-	pthread_mutex_init(&messages_lock, NULL);
+//	sem_init(&messages_semaphore, 0, 0);
+//	pthread_mutex_init(&messages_lock, NULL);
 	pthread_mutex_init(&integrator_lock, NULL);
 	// Make an integrator with its own canvas.
 	integrator = new Integrator(parent->width, parent->height, parent->scene);
@@ -229,27 +229,27 @@ RenderThread::RenderThread(RenderEngine* parent) : parent(parent) {
 }
 
 RenderThread::~RenderThread() {
-	sem_destroy(&messages_semaphore);
-	pthread_mutex_destroy(&messages_lock);
+//	sem_destroy(&messages_semaphore);
+//	pthread_mutex_destroy(&messages_lock);
 	pthread_mutex_destroy(&integrator_lock);
 	delete integrator;
 }
 
 void RenderThread::send_message(RenderMessage message) {
-	pthread_mutex_lock(&messages_lock);
-	messages.push_back(message);
-	pthread_mutex_unlock(&messages_lock);
-	sem_post(&messages_semaphore);
+	pthread_mutex_lock(&parent->messages_lock);
+	parent->messages.push_back(message);
+	pthread_mutex_unlock(&parent->messages_lock);
+	sem_post(&parent->messages_semaphore);
 }
 
 void RenderThread::kill_immediately() {
-	pthread_mutex_lock(&messages_lock);
+	pthread_mutex_lock(&parent->messages_lock);
 	// Clear out all the other messages -- we're about to die, so this is okay,
 	// even though it makes messages_semaphore out of sync.
-	messages.clear();
+	parent->messages.clear();
 //	messages.push_back(RenderMessage({true, PassDescriptor()}));
-	pthread_mutex_unlock(&messages_lock);
-	sem_post(&messages_semaphore);
+	pthread_mutex_unlock(&parent->messages_lock);
+	sem_post(&parent->messages_semaphore);
 }
 
 void* RenderThread::render_thread_main(void* cookie) {
@@ -257,13 +257,13 @@ void* RenderThread::render_thread_main(void* cookie) {
 	RenderMessage current_message;
 	while (true) {
 		// Wait on a new message from the main thread.
-		sem_wait(&self->messages_semaphore);
-		pthread_mutex_lock(&self->messages_lock);
+		sem_wait(&self->parent->messages_semaphore);
+		pthread_mutex_lock(&self->parent->messages_lock);
 		// Copy over the message from the main thread.
-		current_message = self->messages.front();
-		self->messages.pop_front();
+		current_message = self->parent->messages.front();
+		self->parent->messages.pop_front();
 		// Release the lock allowing the main thread to write a new message.
-		pthread_mutex_unlock(&self->messages_lock);
+		pthread_mutex_unlock(&self->parent->messages_lock);
 
 		// If the message tells us to die, do so.
 		if (current_message.do_die)
@@ -302,6 +302,8 @@ RenderEngine::RenderEngine(int width, int height, Scene* scene) : width(width), 
 	// Initialize our semaphore before launching our threads. (It would also be okay to do it after, though.)
 	sem_init(&passes_semaphore, 0, 0);
 	pthread_mutex_init(&master_lock, NULL);
+	sem_init(&messages_semaphore, 0, 0);
+	pthread_mutex_init(&messages_lock, NULL);
 	// Spawn our child threads.
 	for (int i = 0; i < get_optimal_thread_count(); i++)
 		workers.push_back(new RenderThread(this));
@@ -329,6 +331,8 @@ RenderEngine::~RenderEngine() {
 		pthread_join(worker->thread, nullptr);
 	sem_destroy(&passes_semaphore);
 	pthread_mutex_destroy(&master_lock);
+	sem_destroy(&messages_semaphore);
+	pthread_mutex_destroy(&messages_lock);
 	// NB: There is no need to delete the RenderThreads here, because they delete themselves when they get the do_die message.
 	delete master_canvas;
 }

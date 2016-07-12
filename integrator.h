@@ -26,6 +26,7 @@ struct Scene {
 	Real camera_image_plane_width;
 	Real plane_of_focus_distance;
 	Real dof_dispersion;
+	Color sky_color;
 
 	Scene(std::string path);
 	~Scene();
@@ -48,6 +49,7 @@ struct Integrator {
 	double last_pass_seconds;
 	random_device rd;
 	mt19937 engine;
+	int light_sample;
 
 	Color cast_ray(const Ray& ray, int recursions, int branches);
 	Ray get_ray_for_pixel(int x, int y);

@@ -16,6 +16,7 @@ Scene::Scene(string path) : main_camera(Vec(-1, 0, 0), Vec(1, 0, 0)) {
 	// Set default depth of field parameters.
 	plane_of_focus_distance = 1.0;
 	dof_dispersion = 0.0;
+	sky_color = Vec(0, 0, 0);
 
 	// Read in the input.
 	mesh = read_stl(path);
@@ -50,13 +51,25 @@ static inline Real square(Real x) {
 Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 	Real param;
 	const Triangle* hit_triangle;
-	bool result = scene->tree->ray_test(ray, param, &hit_triangle);
+	// These variables will hold barycentric coordinates of the hit.
+	Real u, v;
+	bool result = scene->tree->ray_test(ray, param, u, v, &hit_triangle);
+	// TODO: Remove this assert once I see that it never happens.
+//	if (not (u >= 0 and v >= 0 and u + v <= 1)) {
+//		cout << ">>>>> " << u << " " << v << " <<<<<" << endl;
+//	}
+//	assert(u >= 0 and v >= 0 and u + v <= 1);
 	Color energy(0, 0, 0);
 	if (result) {
+		// We Phong interpolate a normal for the hit, used for smooth shading.
+		Vec interpolated_normal = hit_triangle->base_normal + u * hit_triangle->u_normal + v * hit_triangle->v_normal;
+		interpolated_normal.normalize();
+//		Vec interpolated_normal = hit_triangle->normal; // XXX XXX XXX: Horrible debugging line! Don't leave this line in!
 		Vec hit = ray.origin + param * ray.direction;
 		// Lift the point off the surface.
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
-		Vec reflection = ray.direction - 2 * hit_triangle->normal.dot(ray.direction) * hit_triangle->normal;
+		Vec reflection = ray.direction - 2 * interpolated_normal.dot(ray.direction) * interpolated_normal;
+		reflection.normalize();
 		//*
 		if (recursions > 0) {
 			for (int branch = 0; branch < branches; branch++) {
@@ -76,23 +89,41 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 //		*/
 		// Color by lights.
 		for (auto& light : *scene->lights) {
+//		{
+//			// Choose just one light to light with.
+//			Light& light = (*scene->lights)[(light_sample++) % scene->lights->size()];
 			// Cast a ray to the light.
 			Vec to_light = light.position - hit;
 			Ray shadow_ray(hit, to_light);
 			Real shadow_param;
-			bool shadow_result = scene->tree->ray_test(shadow_ray, shadow_param);
+			Real ignore_u, ignore_v;
+			bool shadow_result = scene->tree->ray_test(shadow_ray, ignore_u, ignore_v, shadow_param);
 			Real distance_to_light = to_light.norm();
 			if ((not shadow_result) or shadow_param > distance_to_light) {
 				// Light is not obscured -- apply it.
 				Color contribution = light.color / (distance_to_light * distance_to_light);
 				// Now we modulate the contribution by our surface shaders.
-				Real lambertian_coef = hit_triangle->normal.dot(to_light) / distance_to_light;
-				reflection.normalize();
+				Real lambertian_coef = interpolated_normal.dot(to_light) / distance_to_light;
+				// NB: This next line took me FOREVER to debug!
+				// I had all these subtle artifacts, until eventually I tracked it down
+				// and realized that some paths were removing energy around the terminator
+				// of some illumination patterns. Eventually I realized it was because the
+				// Lambertian coefficient was negative as epsilons allowed negative normal
+				// dot products to the light. Holy cow, that took me way too long.
+				lambertian_coef = real_max(0.0, lambertian_coef);
+//				reflection.normalize();
 				Real phong_coef = real_max(0.0, reflection.dot(to_light) / distance_to_light);
 				phong_coef = square(square(square(square(phong_coef))));
-				energy += contribution * (lambertian_coef + phong_coef);
+//				phong_coef = square(phong_coef);
+				energy += (contribution * (lambertian_coef + phong_coef)); // * scene->lights->size();
+//				energy += contribution * phong_coef;
 			}
 		}
+	} else {
+		// Along this path we hit no geometry, and must sample the sky.
+		// For now we simply use a sky color (NOT an ambient color).
+		// If I implement HDR lighting this will become the panorama sampling.
+		energy = scene->sky_color;
 	}
 	return energy;
 }
@@ -126,6 +157,7 @@ void PassDescriptor::clamp_bounds(int max_width, int max_height) {
 
 Integrator::Integrator(int width, int height, Scene* scene) : scene(scene), engine(rd()) {
 	passes = 0;
+	light_sample = 0;
 	// Allocate a canvas.
 	canvas = new Canvas(width, height);
 	canvas->zero();
@@ -150,6 +182,7 @@ Ray Integrator::get_ray_for_pixel(int x, int y) {
 }
 
 void Integrator::perform_pass(PassDescriptor desc) {
+	light_sample++;
 	// Iterate over the image.
 	// XXX: Use tiles instead for cache coherency.
 	Vec camera_right = scene->main_camera.direction.cross(scene->scene_up);

@@ -268,7 +268,7 @@ kdTreeNode::~kdTreeNode() {
 	delete high_side;
 }
 
-bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Triangle** hit_triangle) const {
+bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, Real& hit_u, Real& hit_v, const Triangle** hit_triangle) const {
 	// Do a quick AABB based early out.
 	if (not aabb.does_ray_intersect(ray))
 		return false;
@@ -276,19 +276,25 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 	if (is_leaf) {
 		bool overall_result = false;
 		Real best_hit_parameter = FLOAT_INF;
+		Real best_u, best_v;
 		const Triangle* best_hit_triangle = nullptr;
 		for (int i = 0; i < stored_triangle_count; i++) {
 			Real temp_hit_parameter;
 			const Triangle* temp_hit_triangle;
-			bool result = stored_triangles[i].ray_test(ray.ray, temp_hit_parameter, &temp_hit_triangle);
+			Real u, v;
+			bool result = stored_triangles[i].ray_test(ray.ray, temp_hit_parameter, u, v, &temp_hit_triangle);
 			if (result and temp_hit_parameter < best_hit_parameter) {
 				best_hit_parameter = temp_hit_parameter;
+				best_u = u;
+				best_v = v;
 				best_hit_triangle = temp_hit_triangle;
 				overall_result = true;
 			}
 		}
 		if (overall_result) {
 			hit_parameter = best_hit_parameter;
+			hit_u = best_u;
+			hit_v = best_v;
 			if (hit_triangle != nullptr)
 				*hit_triangle = best_hit_triangle;
 		}
@@ -316,16 +322,19 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 
 	// If we overlap both children, then we must test against both children.
 	if (overlaps_both) {
-		bool low_result = low_side->ray_test(ray, hit_parameter, hit_triangle);
+		bool low_result = low_side->ray_test(ray, hit_parameter, hit_u, hit_v, hit_triangle);
 		Real temp_hit_parameter;
+		Real temp_u, temp_v;
 		const Triangle* temp_triangle;
-		bool high_result = high_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
+		bool high_result = high_side->ray_test(ray, temp_hit_parameter, temp_u, temp_v, &temp_triangle);
 		// If there's no high side hit use the low side hit.
 		if (not high_result)
 			return low_result;
 		// If there's no low side hit use the high side hit.
 		if ((not low_result) or temp_hit_parameter < hit_parameter) {
 			hit_parameter = temp_hit_parameter;
+			hit_u = temp_u;
+			hit_v = temp_v;
 			if (hit_triangle != nullptr)
 				*hit_triangle = temp_triangle;
 		}
@@ -340,7 +349,7 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 //		if 
 //	}
 	if (near_side != nullptr) {
-		if (near_side->ray_test(ray, hit_parameter, hit_triangle)) {
+		if (near_side->ray_test(ray, hit_parameter, hit_u, hit_v, hit_triangle)) {
 			// If we hit a near side triangle it is possible that it is a shared near/far triangle.
 			// If this is the case then it is possible that we hit it on the far side in a way that is occluded
 			// by some other far side triangle.
@@ -357,8 +366,9 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 //			if (overlaps_high_side != hit_above_plane) {
 			if (hit_parameter > hit_parameter_of_far_side_aabb) {
 				Real temp_hit_parameter;
+				Real temp_u, temp_v;
 				const Triangle* temp_triangle;
-				bool temp_result = far_side->ray_test(ray, temp_hit_parameter, &temp_triangle);
+				bool temp_result = far_side->ray_test(ray, temp_hit_parameter, temp_u, temp_v, &temp_triangle);
 				// We MUST get a far side hit, because the near side triangle we hit must also be a far side triangle.
 //				assert(temp_result);
 				if (temp_result and temp_hit_parameter < hit_parameter) {
@@ -370,6 +380,8 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 //					assert(temp_hit_parameter <= hit_parameter);
 //					hit_parameter = real_min(temp_hit_parameter, hit_parameter);
 					hit_parameter = temp_hit_parameter;
+					hit_u = temp_u;
+					hit_v = temp_v;
 					if (hit_triangle != nullptr)
 						*hit_triangle = temp_triangle;
 				}
@@ -379,7 +391,7 @@ bool kdTreeNode::ray_test(const CastingRay& ray, Real& hit_parameter, const Tria
 		}
 	}
 	if (far_side != nullptr)
-		return far_side->ray_test(ray, hit_parameter, hit_triangle);
+		return far_side->ray_test(ray, hit_parameter, hit_u, hit_v, hit_triangle);
 	return false;
 }
 
@@ -562,8 +574,8 @@ kdTree::~kdTree() {
 
 long long rays_cast = 0;
 
-bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) {
-	rays_cast++;
-	return root->ray_test(ray, hit_parameter, hit_triangle);
+bool kdTree::ray_test(const Ray& ray, Real& hit_parameter, Real& hit_u, Real& hit_v, const Triangle** hit_triangle) {
+	//rays_cast++;
+	return root->ray_test(ray, hit_parameter, hit_u, hit_v, hit_triangle);
 }
 

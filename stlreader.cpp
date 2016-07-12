@@ -4,6 +4,7 @@ using namespace std;
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
+#include <map>
 #include "stlreader.h"
 
 vector<Triangle>* read_stl(std::string path) {
@@ -29,12 +30,53 @@ vector<Triangle>* read_stl(std::string path) {
 		// Currently I ignore the normal and just hope it ends up being correct from the vertex order.
 		// TODO: Reorder the vertices to match the normal given, or at least put in an assert.
 		tris->push_back(Triangle(p0, p1, p2));
+		// Save all the assigned normals.
+		tris->back().assigned_normal = Vec(normal[0], normal[1], normal[2]);
 		uint16_t attribute_count;
 		assert(fread(&attribute_count, sizeof(uint16_t), 1, fp) == 1);
 		// We don't handle any extensions.
 		assert(attribute_count == 0);
 	}
 	fclose(fp);
+	compute_barycentric_normals(tris);
 	return tris;
+}
+
+// In order
+namespace std {
+	template<>
+	struct less<Vec> {
+		bool operator()(Vec const& a, Vec const& b) const {
+//			assert(a.size()==b.size());
+			for (int i = 0; i < 3; i++) {
+				if (a(i) < b(i))
+					return true;
+				if (a(i) > b(i))
+					return false;
+			}
+			return false;
+		}
+	};
+}
+
+void compute_barycentric_normals(std::vector<Triangle>* triangles) {
+	// First we find all the triangles adjacent to each point.
+	map<Vec, vector<Triangle*>> point_to_tris;
+	for (auto& triangle : *triangles)
+		for (int i = 0; i < 3; i++)
+			point_to_tris[triangle.points[i]].push_back(&triangle);
+	// Then we average triangle normals around each loop.
+	for (auto& triangle : *triangles) {
+		Vec vertex_normals[3];
+		for (int i = 0; i < 3; i++) {
+			Vec& normal = vertex_normals[i];
+			normal = Vec(0, 0, 0);
+			for (Triangle* other_triangle : point_to_tris[triangle.points[i]])
+				normal += other_triangle->normal;
+			normal.normalize();
+		}
+//		triangle.set_normals(triangle.normal, triangle.normal, triangle.normal);
+		triangle.set_normals(vertex_normals[0], vertex_normals[1], vertex_normals[2]);
+	}
 }
 

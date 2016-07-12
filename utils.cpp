@@ -122,15 +122,21 @@ Triangle::Triangle(Vec p0, Vec p1, Vec p2) {
 	normal = edge01.cross(edge02);
 	normal.normalize();
 	// In theory these three plane parameters should be equal, but let's average them.
-	plane_parameter = (normal.dot(p0) + normal.dot(p1) + normal.dot(p2)) / 3.0;
+//	plane_parameter = (normal.dot(p0) + normal.dot(p1) + normal.dot(p2)) / 3.0;
 	aabb.set_to_point(p0);
 	aabb.update(p1);
 	aabb.update(p2);
 }
 
+void Triangle::set_normals(Vec n0, Vec n1, Vec n2) {
+	base_normal = n0;
+	u_normal = n1 - n0;
+	v_normal = n2 - n0;
+}
+
 // Performs M\"oller-Trumbore intersection as per Wikipedia.
-bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) const {
-	triangle_tests++;
+bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, Real& hit_u, Real& hit_v, const Triangle** hit_triangle) const {
+//	triangle_tests++;
 	Vec P = ray.direction.cross(edge02);
 	Real det = edge01.dot(P);
 	if (det > -EPSILON and det < EPSILON)
@@ -151,11 +157,14 @@ bool Triangle::ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hi
 	hit_parameter = t;
 	if (hit_triangle != nullptr)
 		*hit_triangle = this;
+	hit_u = u;
+	hit_v = v;
 	return true;
 }
 
 Vec Triangle::project_point_to_given_altitude(Vec point, Real desired_altitude) const {
 	Real parameter = normal.dot(point);
+	Real plane_parameter = (normal.dot(points[0]) + normal.dot(points[1]) + normal.dot(points[2])) / 3.0;
 	Real change = (plane_parameter - parameter) + desired_altitude;
 	return point + change * normal;
 }

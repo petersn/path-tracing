@@ -75,11 +75,18 @@ struct Triangle {
 	Vec edge01, edge02;
 	Vec normal;
 	AABB aabb;
-	Real plane_parameter;
+	// We represent the normals in barycentric coordintaes.
+	// The overall normal is base_normal + u * u_normal + v * v_normal;
+	Vec base_normal;
+	Vec u_normal;
+	Vec v_normal;
+	Vec assigned_normal;
+//	Real plane_parameter;
 
 	Triangle();
 	Triangle(Vec p0, Vec p1, Vec p2);
-	bool ray_test(const Ray& ray, Real& hit_parameter, const Triangle** hit_triangle) const;
+	void set_normals(Vec n0, Vec n1, Vec n2);
+	bool ray_test(const Ray& ray, Real& hit_parameter, Real& hit_u, Real& hit_v, const Triangle** hit_triangle) const;
 	Vec project_point_to_given_altitude(Vec point, Real desired_altitude) const;
 	bool intersects_axis_aligned_plane(int axis, Real plane_height) const;
 };

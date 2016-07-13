@@ -49,6 +49,7 @@ static inline Real square(Real x) {
 }
 
 Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
+	normal_distribution<> light_delocalization_dist(0, 0.2);
 	Real param;
 	const Triangle* hit_triangle;
 	// These variables will hold barycentric coordinates of the hit.
@@ -67,6 +68,7 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 //		Vec interpolated_normal = hit_triangle->normal; // XXX XXX XXX: Horrible debugging line! Don't leave this line in!
 		Vec hit = ray.origin + param * ray.direction;
 		// Lift the point off the surface.
+//		Vec embedded_hit = hit_triangle->project_point_to_given_altitude(hit, -1e-3);
 		hit = hit_triangle->project_point_to_given_altitude(hit, 1e-3);
 		Vec reflection = ray.direction - 2 * interpolated_normal.dot(ray.direction) * interpolated_normal;
 		reflection.normalize();
@@ -81,6 +83,25 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 				Vec d2 = hit_triangle->normal.cross(d1);
 				Vec scatter_direction = local_scatter_direction(0) * hit_triangle->normal + local_scatter_direction(1) * d1 + local_scatter_direction(2) * d2;
 //				Vec scatter_direction = reflection;
+/*
+				Real r = 1.0 / 1.05;
+				Vec opposing_normal = interpolated_normal;
+				Vec refraction_origin = embedded_hit;
+				if (interpolated_normal.dot(ray.direction) > 0) {
+					opposing_normal = - opposing_normal;
+					r = 1.0 / r;
+					refraction_origin = hit;
+				}
+//				bool totally_internally_reflected;
+//				Vec scatter_direction = fresnel_compute_refraction(r, ray.direction, opposing_normal, totally_internally_reflected);
+//				if (totally_internally_reflected)
+//					continue;
+//				Vec scatter_direction = ray.direction;
+				Vec scatter_direction = reflection;
+*/
+//				scatter_direction += 100 * reflection;
+//				scatter_direction.normalize();
+				scatter_direction = reflection;
 				Ray scattered_ray(hit, scatter_direction);
 				// Recursively sample the scattered light.
 				energy += (1.0 / branches) * 0.8 * cast_ray(scattered_ray, recursions-1, 1);
@@ -93,7 +114,13 @@ Color Integrator::cast_ray(const Ray& ray, int recursions, int branches) {
 //			// Choose just one light to light with.
 //			Light& light = (*scene->lights)[(light_sample++) % scene->lights->size()];
 			// Cast a ray to the light.
-			Vec to_light = light.position - hit;
+			// First we compute a random amount to delocalize the light by.
+			// I would have just written Vec ld(ldd(engine), ldd(engine), ldd(engine));, but this is actually undefined behavior!
+			// So instead I do a declaration here, because there is a sequence point at each comma in such a declaration,
+			// preventing the compiler from compiling this code as system("do something bad");
+			auto d1 = light_delocalization_dist(engine), d2 = light_delocalization_dist(engine), d3 = light_delocalization_dist(engine);
+			Vec light_delocalization(d1, d2, d3);
+			Vec to_light = light_delocalization + light.position - hit;
 			Ray shadow_ray(hit, to_light);
 			Real shadow_param;
 			Real ignore_u, ignore_v;
@@ -231,7 +258,7 @@ void Integrator::perform_pass(PassDescriptor desc) {
 			ray.direction -= (dof_x_offset / plane_of_focus_distance) * camera_right;
 			ray.direction -= (dof_y_offset / plane_of_focus_distance) * camera_up;
 			// Do the big expensive computation.
-			Color contribution = cast_ray(ray, 4, 1);
+			Color contribution = cast_ray(ray, 10, 1);
 			// Accumulate the energy into our buffer.
 			*canvas->pixel_ptr(x, y) += contribution;
 			// Mark that another pass is contributing to this pixel.

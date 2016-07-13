@@ -15,10 +15,12 @@ extern long long triangle_tests;
 typedef double Real;
 typedef Eigen::Vector3d Vec;
 #define real_abs fabs
+#define real_sqrt sqrt
 #else
 typedef float Real;
 typedef Eigen::Vector3f Vec;
 #define real_abs fabsf
+#define real_sqrt sqrtf
 #endif
 
 typedef Eigen::Matrix<Real, 3, 3> Mat;
@@ -38,6 +40,25 @@ inline static Vec vec_min(Vec x, Vec y) {
 
 inline static Vec vec_max(Vec x, Vec y) {
 	return Vec(real_max(x(0), y(0)), real_max(x(1), y(1)), real_max(x(2), y(2)));
+}
+
+// As per: https://en.wikipedia.org/wiki/Snell%27s_law#Vector_form
+inline static Vec fresnel_compute_refraction(Real refractive_index_ratio, Vec incoming, Vec normal, bool& totally_internally_reflected) {
+	Real r = refractive_index_ratio;
+	Real c = - normal.dot(incoming);
+	assert(c >= 0);
+	Real argument = 1 - r * r * (1 - c * c);
+	if (argument < 0) {
+		totally_internally_reflected = true;
+		return Vec(0, 0, 0);
+	}
+	totally_internally_reflected = false;
+//	assert(1 - r * r * (1 - c * c) >= 0);
+	Real coef = r * c - real_sqrt(argument);
+	Vec refraction = r * incoming + coef * normal;
+	refraction.normalize();
+	assert(refraction.dot(incoming) >= 0);
+	return refraction;
 }
 
 struct Ray {

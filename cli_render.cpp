@@ -26,6 +26,8 @@ int main(int argc, char** argv) {
 		("threads", po::value<int>()->default_value(0), "Number of threads. (0 for auto)")
 		("angle", po::value<double>()->default_value(1.0), "Camera angle.")
 		("camera-altitude", po::value<double>()->default_value(0.2), "Camera altitude.")
+		("camera-distance", po::value<double>()->default_value(5.0), "Camera distance from (origin + camera_altitude * zhat).")
+		("camera-z-facing-offset", po::value<double>()->default_value(0.0), "This option shouldn't exist.")
 		("dof-aperture", po::value<double>()->default_value(0.0), "Depth of field Gaussian aperture standard deviation. Use 0.0 to disable DoF.")
 		("dof-distance", po::value<double>()->default_value(1.0), "Distance to the plane of focus.")
 		("tile-width", po::value<int>()->default_value(64), "Width of a rendering tile in pixels.")
@@ -89,8 +91,9 @@ int main(int argc, char** argv) {
 	scene->lights->push_back(Light({Vec(-2, -2, 4), 9.0 * Vec(0.25, 0.25, 0.8)}));
 	scene->camera_image_plane_width = 0.5 * 1.5;
 	Real angle = vm["angle"].as<double>();//22 * 0.05;
-	scene->main_camera.origin = -5 * Vec(cos(angle), sin(angle), 0.0);
+	scene->main_camera.origin = -vm["camera-distance"].as<double>() * Vec(cos(angle), sin(angle), 0.0);
 	scene->main_camera.direction = -scene->main_camera.origin;
+	scene->main_camera.direction(2) += vm["camera-z-facing-offset"].as<double>();
 	scene->main_camera.direction.normalize();
 	scene->main_camera.origin += Vec(0.0, 0.0, vm["camera-altitude"].as<double>());
 	scene->plane_of_focus_distance = vm["dof-distance"].as<double>();
